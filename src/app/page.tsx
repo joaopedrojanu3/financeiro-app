@@ -1,65 +1,216 @@
-import Image from "next/image";
+'use client'
 
-export default function Home() {
+import React, { useMemo, useState, useEffect } from 'react'
+import Link from 'next/link'
+import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts'
+import { Wallet, Utensils, Car, ShoppingBag, Gamepad2, HeartPulse, Receipt, Minus, Plus } from 'lucide-react'
+import { useTransactions } from '@/hooks/useTransactions'
+import { isThisMonth, parseISO } from 'date-fns'
+
+export default function Dashboard() {
+  const { transactions, loading } = useTransactions()
+
+  // SSOT: Busca metas financeiras do banco de dados
+  const [spendingGoal, setSpendingGoal] = useState(2000)
+  const [incomeGoal, setIncomeGoal] = useState(1500)
+
+  useEffect(() => {
+    fetch('/api/user-settings')
+      .then(res => res.json())
+      .then(data => {
+        if (data.monthly_spending_goal) setSpendingGoal(Number(data.monthly_spending_goal))
+        if (data.monthly_income_goal) setIncomeGoal(Number(data.monthly_income_goal))
+      })
+      .catch(err => console.error('Erro ao buscar metas:', err))
+  }, [])
+
+  // Calcula valores agregados baseado de transações reais
+  const { income, expense, chartData } = useMemo(() => {
+    let incomeCount = 0
+    let expenseCount = 0
+    const catTotals: Record<string, { value: number, color: string, name: string }> = {}
+
+    transactions.forEach(t => {
+      // Delta Zero: Filtrar somente pelo mês atual
+      if (!isThisMonth(parseISO(t.date))) return
+
+      const amount = Number(t.amount)
+      if (t.type === 'income') incomeCount += amount
+      else if (t.type === 'expense') {
+        expenseCount += amount
+        // Adiciona pro grafico
+        const catName = t.categories?.name || 'Outros'
+        const catColor = t.categories?.color || '#3B82F6'
+
+        if (!catTotals[catName]) {
+          catTotals[catName] = { value: 0, color: catColor, name: catName }
+        }
+        catTotals[catName].value += amount
+      }
+    })
+
+    // Converte pra array formatado do grafico
+    const chart = Object.values(catTotals).map(item => ({
+      name: item.name,
+      value: item.value,
+      color: item.color
+    }))
+
+    // Fallback pra nao quebrar grafico se vazio
+    if (chart.length === 0) {
+      chart.push({ name: 'Vazio', value: 1, color: '#e2e8f0' })
+    }
+
+    return { income: incomeCount, expense: expenseCount, chartData: chart }
+
+  }, [transactions])
+
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <>
+      <div className="flex flex-col items-center px-4 w-full h-full pb-20">
+
+        {/* Gráfico Metade Superior */}
+        <div className="relative w-full aspect-square max-w-[320px] mx-auto mt-4">
+          {loading ? (
+            <div className="absolute inset-0 flex items-center justify-center animate-pulse bg-slate-50 rounded-full">
+              <Wallet size={32} className="text-slate-300" />
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={chartData}
+                  innerRadius="75%"
+                  outerRadius="95%"
+                  paddingAngle={2}
+                  dataKey="value"
+                  stroke="none"
+                  cornerRadius={4}
+                >
+                  {chartData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Pie>
+              </PieChart>
+            </ResponsiveContainer>
+          )}
+
+          {/* Centro do Gráfico */}
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="bg-[#45D1C0]/10 p-3 rounded-full">
+              <Wallet size={32} className="text-[#45D1C0]" />
+            </div>
+          </div>
+
+          {/* Ícones Orbitais Mocks Simulando a UI da Imagem */}
+          <div className="absolute top-2 left-0 flex flex-col items-center">
+            <div className="bg-[#45D1C0]/10 p-3 rounded-full mb-1">
+              <Utensils size={20} className="text-[#45D1C0]" />
+            </div>
+            <span className="text-[9px] font-bold text-slate-500 uppercase">Alimentação</span>
+          </div>
+          <div className="absolute top-2 right-0 flex flex-col items-center">
+            <div className="bg-[#45D1C0]/10 p-3 rounded-full mb-1">
+              <Car size={20} className="text-[#45D1C0]" />
+            </div>
+            <span className="text-[9px] font-bold text-slate-500 uppercase">Transporte</span>
+          </div>
+          <div className="absolute top-1/2 -right-4 -translate-y-1/2 flex flex-col items-center">
+            <div className="bg-[#45D1C0]/10 p-3 rounded-full mb-1">
+              <ShoppingBag size={20} className="text-[#45D1C0]" />
+            </div>
+            <span className="text-[9px] font-bold text-slate-500 uppercase">Shopping</span>
+          </div>
+          <div className="absolute bottom-2 right-2 flex flex-col items-center">
+            <div className="bg-[#45D1C0]/10 p-3 rounded-full mb-1">
+              <Gamepad2 size={20} className="text-[#45D1C0]" />
+            </div>
+            <span className="text-[9px] font-bold text-slate-500 uppercase">Lazer</span>
+          </div>
+          <div className="absolute bottom-2 left-2 flex flex-col items-center">
+            <div className="bg-[#45D1C0]/10 p-3 rounded-full mb-1">
+              <HeartPulse size={20} className="text-[#45D1C0]" />
+            </div>
+            <span className="text-[9px] font-bold text-slate-500 uppercase">Saúde</span>
+          </div>
+          <div className="absolute top-1/2 -left-4 -translate-y-1/2 flex flex-col items-center">
+            <div className="bg-[#45D1C0]/10 p-3 rounded-full mb-1">
+              <Receipt size={20} className="text-[#45D1C0]" />
+            </div>
+            <span className="text-[9px] font-bold text-slate-500 uppercase">Bills</span>
+          </div>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
+
+        {/* Resumo Despesas / Receitas (Live) */}
+        <div className="flex w-full justify-between items-center mb-6 px-4 transition-opacity" style={{ opacity: loading ? 0.5 : 1 }}>
+          <div className="flex flex-col items-center w-1/2 border-r border-slate-100">
+            <span className="text-xs font-semibold text-slate-400 mb-1">Despesas</span>
+            <span className="text-xl font-bold text-[#F03D1A]">
+              {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(expense)}
+            </span>
+          </div>
+          <div className="flex flex-col items-center w-1/2">
+            <span className="text-xs font-semibold text-slate-400 mb-1">Receitas</span>
+            <span className="text-xl font-bold text-[#17B29F]">
+              {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(income)}
+            </span>
+          </div>
+        </div>
+        {/* Planejamento do Mês */}
+        <div className="w-full bg-white border border-slate-100 rounded-2xl p-5 mb-8 shadow-sm">
+          <h3 className="text-[10px] font-bold tracking-widest text-slate-400 uppercase mb-4">Planejamento do Mês</h3>
+
+          <div className="flex justify-between items-center mb-2">
+            <span className="text-sm font-medium text-slate-600">Meta de Gastos</span>
+            <span className="text-sm font-bold text-slate-900">
+              {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(spendingGoal)}
+            </span>
+          </div>
+
+          {/* Progress Bar Dinamica! */}
+          <div className="w-full h-2 bg-slate-100 rounded-full mb-6 overflow-hidden">
+            <div
+              className={`h-full rounded-full transition-all duration-1000 ${expense > spendingGoal ? 'bg-[#F03D1A]' : 'bg-[#45D1C0]'}`}
+              style={{ width: `${Math.min((expense / spendingGoal) * 100, 100)}%` }}
             />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+          </div>
+
+          <div className="flex justify-between items-center">
+            <span className="text-sm font-medium text-slate-600">Rendimento Mínimo</span>
+            <span className={`text-sm font-bold ${income >= incomeGoal ? 'text-[#17B29F]' : 'text-[#F03D1A]'}`}>
+              {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(incomeGoal)}
+            </span>
+          </div>
+
+          {/* Indicador visual do rendimento */}
+          <div className="w-full h-1.5 bg-slate-100 rounded-full mt-2 overflow-hidden">
+            <div
+              className={`h-full rounded-full transition-all duration-1000 ${income >= incomeGoal ? 'bg-[#17B29F]' : 'bg-amber-400'}`}
+              style={{ width: `${Math.min((income / incomeGoal) * 100, 100)}%` }}
+            />
+          </div>
         </div>
-      </main>
-    </div>
-  );
+
+        {/* Botões de Ação Principais */}
+        <div className="flex w-full gap-4 mt-auto p-4 md:p-0">
+          <Link
+            href="/lancamento/novo?type=expense"
+            className="flex-1 flex items-center justify-center gap-2 bg-[#F03D1A] text-white py-4 rounded-xl font-bold text-lg shadow-lg hover:bg-red-600 transition-colors"
+          >
+            <Minus size={24} />
+            Despesa
+          </Link>
+          <Link
+            href="/lancamento/novo?type=income"
+            className="flex-1 flex items-center justify-center gap-2 bg-[#45D1C0] text-white py-4 rounded-xl font-bold text-lg shadow-lg hover:bg-[#17B29F] transition-colors"
+          >
+            <Plus size={24} />
+            Receita
+          </Link>
+        </div>
+
+      </div>
+    </>
+  )
 }
