@@ -1,0 +1,3 @@
+TRUNCATE TABLE transactions CASCADE;
+TRUNCATE TABLE recurring_bills CASCADE;
+TRUNCATE TABLE bill_payments CASCADE;

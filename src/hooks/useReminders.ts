@@ -1,5 +1,4 @@
-import { useState, useEffect } from 'react'
-import { createClient } from '@supabase/supabase-js'
+import { useState, useEffect, useCallback } from 'react'
 
 export type Reminder = {
     id: string
@@ -9,6 +8,7 @@ export type Reminder = {
     due_date: string
     frequency: string
     is_active: boolean
+    end_date?: string | null
     categories?: {
         name: string
         color: string
@@ -16,45 +16,74 @@ export type Reminder = {
     } | null
 }
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-const supabase = createClient(supabaseUrl, supabaseKey)
+export type BillPayment = {
+    id: string
+    recurring_bill_id: string
+    occurrence_date: string
+    paid_at: string
+}
+
+import { createClient } from '@/lib/supabase/client'
+import { getAdminHeaders } from '@/lib/apiClient'
+
+const supabase = createClient()
 
 export function useReminders() {
     const [reminders, setReminders] = useState<Reminder[]>([])
+    const [payments, setPayments] = useState<BillPayment[]>([])
     const [loading, setLoading] = useState(true)
 
-    const fetchReminders = async () => {
+    const fetchAll = async () => {
+        setLoading(true)
+
+        // Busca lembretes e pagamentos DE FORMA INDEPENDENTE
+        // Se um falhar, o outro ainda funciona
         try {
-            setLoading(true)
-            const response = await fetch('/api/reminders')
-            if (!response.ok) throw new Error('Falha ao buscar lembretes')
-            const data = await response.json()
-            setReminders(data)
-        } catch (error) {
-            console.error('Erro buscando Lembretes:', error)
-        } finally {
-            setLoading(false)
+            const headers = getAdminHeaders()
+            const res = await fetch('/api/reminders', { headers })
+            if (res.ok) {
+                const data = await res.json()
+                setReminders(data)
+            }
+        } catch (err) {
+            console.error('Erro buscando lembretes:', err)
         }
+
+        try {
+            const headers = getAdminHeaders()
+            const res = await fetch('/api/bill-payments', { headers })
+            if (res.ok) {
+                const data = await res.json()
+                setPayments(data)
+            }
+        } catch (err) {
+            // bill_payments pode não existir ainda (migration v4 pendente)
+            console.warn('Tabela bill_payments indisponível:', err)
+        }
+
+        setLoading(false)
     }
 
     useEffect(() => {
-        // Delta Zero SSOT: Carga inicial do banco
-        fetchReminders()
+        // eslint-disable-next-line
+        fetchAll()
 
-        // Inscreve no canal realtime para ser reativo
-        const subscription = supabase
-            .channel('public:recurring_bills')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'recurring_bills' }, payload => {
-                console.log('Realtime Lembretes Mudança:', payload)
-                fetchReminders()
-            })
+        // Realtime: escuta mudanças em recurring_bills E bill_payments
+        const channel = supabase
+            .channel('reminders-and-payments')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'recurring_bills' }, () => fetchAll())
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'bill_payments' }, () => fetchAll())
             .subscribe()
 
-        return () => {
-            supabase.removeChannel(subscription)
-        }
+        return () => { supabase.removeChannel(channel) }
     }, [])
 
-    return { reminders, loading, refetch: fetchReminders }
+    // useCallback para estabilizar a referência da função no useMemo dos consumidores
+    const isOccurrencePaid = useCallback((reminderId: string, occurrenceDate: string): boolean => {
+        return payments.some(
+            p => p.recurring_bill_id === reminderId && p.occurrence_date === occurrenceDate
+        )
+    }, [payments])
+
+    return { reminders, payments, loading, refetch: fetchAll, isOccurrencePaid }
 }

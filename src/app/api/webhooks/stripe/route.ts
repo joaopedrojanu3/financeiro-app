@@ -18,9 +18,10 @@ export async function POST(req: Request) {
 
         try {
             event = stripe.webhooks.constructEvent(bodyText, signature, webhookSecret)
-        } catch (err: any) {
-            console.error(`Webhook Error: ${err.message}`)
-            return NextResponse.json({ error: `Webhook Error: ${err.message}` }, { status: 400 })
+        } catch (err: unknown) {
+            const errorMessage = err instanceof Error ? err.message : 'Unknown error'
+            console.error(`❌ Erro de Webhook:`, errorMessage)
+            return NextResponse.json({ error: `Webhook Error: ${errorMessage}` }, { status: 400 })
         }
 
         // Regra Delta Zero: Operações CRUD via webhook -> Supabase
@@ -50,7 +51,8 @@ export async function POST(req: Request) {
                 break
             }
             default:
-                console.log(`Unhandled event type ${event.type}`)
+                console.log(`Unhandled event type ${event.type
+                    }`)
         }
 
         return NextResponse.json({ received: true })

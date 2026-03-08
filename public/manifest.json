@@ -1,0 +1,21 @@
+{
+  "name": "Stitch Finance",
+  "short_name": "Financeiro",
+  "description": "App de gestão financeira familiar",
+  "start_url": "/?source=pwa",
+  "display": "standalone",
+  "background_color": "#E5F7F3",
+  "theme_color": "#17B29F",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

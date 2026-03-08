@@ -1,8 +1,11 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase/client'
+import { getAdminHeaders } from '@/lib/apiClient'
 import { useRouter } from 'next/navigation'
+
+const supabase = createClient()
 
 export interface Category {
     id: string
@@ -32,15 +35,16 @@ export function useTransactions() {
     const fetchTransactions = useCallback(async () => {
         try {
             setLoading(true)
-            const response = await fetch('/api/transactions')
+            const headers = getAdminHeaders()
+            const response = await fetch('/api/transactions', { headers })
             if (!response.ok) throw new Error('Falha ao buscar transações')
 
             const result = await response.json()
             setTransactions(result.data || [])
             setError(null)
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error('Error fetching transactions:', err)
-            setError(err.message)
+            setError(err instanceof Error ? err.message : 'Unknown error')
         } finally {
             setLoading(false)
         }
@@ -76,7 +80,7 @@ export function useTransactions() {
         try {
             const response = await fetch('/api/transactions', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: getAdminHeaders(),
                 body: JSON.stringify(data)
             })
 

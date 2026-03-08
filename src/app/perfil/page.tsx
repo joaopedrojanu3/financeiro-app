@@ -1,6 +1,6 @@
 'use client'
 
-import { UserCircle, Shield, CreditCard, Bell, HelpCircle } from 'lucide-react'
+import { UserCircle, Shield, CreditCard, Bell, HelpCircle, LucideIcon } from 'lucide-react'
 
 export default function ProfilePage() {
     return (
@@ -29,7 +29,7 @@ export default function ProfilePage() {
     )
 }
 
-function ProfileOption({ icon: Icon, title, desc }: { icon: any, title: string, desc: string }) {
+function ProfileOption({ icon: Icon, title, desc }: { icon: LucideIcon, title: string, desc: string }) {
     return (
         <button className="flex items-center w-full p-4 bg-white border border-slate-100 rounded-2xl shadow-sm hover:shadow-md hover:border-[#45D1C0]/30 transition-all group">
             <div className="w-12 h-12 bg-slate-50 group-hover:bg-[#45D1C0]/10 rounded-xl flex items-center justify-center mr-4 transition-colors">

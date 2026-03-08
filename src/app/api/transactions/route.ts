@@ -1,14 +1,18 @@
-import { NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { NextResponse, type NextRequest } from 'next/server'
+import { createClient, getAuthorizedUserId } from '@/lib/supabase/server'
 import { revalidateTag } from 'next/cache'
 
-// Delta Zero: Toda leitura deve vir diretamente do Supabase ou de cache validado por evento.
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
     try {
+        const userId = await getAuthorizedUserId(request)
+        if (!userId) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+        }
+
+        const supabase = await createClient()
         const { searchParams } = new URL(request.url)
         const limit = searchParams.get('limit') ? parseInt(searchParams.get('limit') as string) : 50
 
-        // Busca todas as transações, ordenadas da mais recente para a mais antiga, incluíndo os dados da categoria relacionada
         const { data, error } = await supabase
             .from('transactions')
             .select(`
@@ -21,6 +25,7 @@ export async function GET(request: Request) {
                     type
                 )
             `)
+            .eq('user_id', userId)
             .order('date', { ascending: false })
             .limit(limit)
 
@@ -29,37 +34,37 @@ export async function GET(request: Request) {
             return NextResponse.json({ error: error.message }, { status: 500 })
         }
 
-        return NextResponse.json({
-            status: 'success',
-            data: data
-        })
-
+        return NextResponse.json({ status: 'success', data: data })
     } catch (err) {
         console.error('API /transactions GET error:', err)
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
     }
 }
 
-// Delta Zero: Toda mutação de dados deve passar pela API e ir pro banco (SSOT)
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
     try {
+        const userId = await getAuthorizedUserId(request)
+        if (!userId) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+        }
+
+        const supabase = await createClient()
         const body = await request.json()
 
-        // Validação mínima
         if (!body.description || !body.amount || !body.type || !body.date) {
             return NextResponse.json({ error: 'Faltam campos obrigatórios' }, { status: 400 })
         }
 
-        // Insere a transação no banco (A Trigger do Supabase cria versão e timestamp)
         const { data, error } = await supabase
             .from('transactions')
             .insert({
                 description: body.description,
                 amount: body.amount,
-                type: body.type,  // 'income' ou 'expense'
+                type: body.type,
                 date: body.date,
-                category_id: body.category_id || null, // opcional
-                status: body.status || 'completed'
+                category_id: body.category_id || null,
+                status: body.status || 'completed',
+                user_id: userId
             })
             .select()
             .single()
@@ -69,18 +74,13 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: error.message }, { status: 400 })
         }
 
-        // Delta Zero: Após qualquer evento o sistema deve automaticamente invalidar caches do Next.js
         revalidateTag('transactions')
-
-        // Em um sistema real, o evento global também seria disparado num webhook ou num sistema de Pub/Sub
-        // Aqui o Supabase Realtime cuidará do frontend, enquanto revalidamos o cache da API/Server.
 
         return NextResponse.json({
             status: 'success',
             message: 'TRANSACTION_CREATED',
             data: data
         }, { status: 201 })
-
     } catch (err) {
         console.error('API /transactions POST error:', err)
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })

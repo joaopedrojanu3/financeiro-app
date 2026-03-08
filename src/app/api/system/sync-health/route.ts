@@ -12,7 +12,7 @@ export async function GET() {
 
         // Check de sanidade geral
         let status = 'OK'
-        let issues = []
+        const issues: string[] = []
 
         if (supabaseError) {
             status = 'SYNC_ERROR'

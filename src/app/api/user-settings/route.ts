@@ -1,26 +1,31 @@
-import { createClient } from '@supabase/supabase-js'
-import { NextResponse } from 'next/server'
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY! || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-const supabase = createClient(supabaseUrl, supabaseKey)
+import { NextResponse, type NextRequest } from 'next/server'
+import { createClient, getAuthorizedUserId } from '@/lib/supabase/server'
 
 // GET: Retorna as metas do usuário
-export async function GET() {
+export async function GET(req: NextRequest) {
     try {
-        // Pega o primeiro perfil (por enquanto sem auth multi-user)
+        const userId = await getAuthorizedUserId(req)
+        if (!userId) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+        }
+
+        const supabase = await createClient()
+
         const { data, error } = await supabase
             .from('user_profiles')
-            .select('monthly_spending_goal, monthly_income_goal')
-            .limit(1)
+            .select('monthly_spending_goal, monthly_income_goal, show_savings_goal_on_dashboard, full_name, company_name, is_admin')
+            .eq('user_id', userId)
             .single()
 
         if (error) {
-            // Se não existir perfil, retorna defaults
             if (error.code === 'PGRST116') {
                 return NextResponse.json({
-                    monthly_spending_goal: 2000,
-                    monthly_income_goal: 1500
+                    monthly_spending_goal: 0,
+                    monthly_income_goal: 1500,
+                    show_savings_goal_on_dashboard: true,
+                    full_name: null,
+                    company_name: null,
+                    is_admin: false
                 })
             }
             return NextResponse.json({ error: error.message }, { status: 500 })
@@ -33,22 +38,27 @@ export async function GET() {
 }
 
 // PUT: Atualiza as metas do usuário
-export async function PUT(req: Request) {
+export async function PUT(req: NextRequest) {
     try {
-        const body = await req.json()
-        const { monthly_spending_goal, monthly_income_goal } = body
+        const userId = await getAuthorizedUserId(req)
+        if (!userId) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+        }
 
-        // Tenta atualizar o primeiro perfil existente
+        const supabase = await createClient()
+        const body = await req.json()
+        const { monthly_spending_goal, monthly_income_goal, show_savings_goal_on_dashboard, full_name, company_name } = body
+
         const { data: existing } = await supabase
             .from('user_profiles')
             .select('id')
-            .limit(1)
+            .eq('user_id', userId)
             .single()
 
         if (existing) {
             const { data, error } = await supabase
                 .from('user_profiles')
-                .update({ monthly_spending_goal, monthly_income_goal })
+                .update({ monthly_spending_goal, monthly_income_goal, show_savings_goal_on_dashboard, full_name, company_name })
                 .eq('id', existing.id)
                 .select()
                 .single()
@@ -58,13 +68,15 @@ export async function PUT(req: Request) {
             }
             return NextResponse.json(data)
         } else {
-            // Cria um perfil novo se não existir
             const { data, error } = await supabase
                 .from('user_profiles')
                 .insert({
-                    user_id: '00000000-0000-0000-0000-000000000000',
+                    user_id: userId,
                     monthly_spending_goal,
-                    monthly_income_goal
+                    monthly_income_goal,
+                    show_savings_goal_on_dashboard,
+                    full_name,
+                    company_name
                 })
                 .select()
                 .single()

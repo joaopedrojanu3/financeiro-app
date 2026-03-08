@@ -1,23 +1,38 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Calendar, ChevronLeft, Receipt, Utensils, Car, HeartPulse, ShoppingBag, PlusCircle, Loader2, Building, PiggyBank } from 'lucide-react'
+import { Calendar, ChevronLeft, Receipt, Utensils, Car, HeartPulse, ShoppingBag, PlusCircle, Loader2, Building, PiggyBank, Briefcase, Home, Tag, Smartphone, Dumbbell, Plane, Coffee, Music, Book, Gift, Wrench, Scissors, Monitor, Truck, Zap, Camera, Umbrella, LucideIcon } from 'lucide-react'
 import { useTransactions } from '@/hooks/useTransactions'
+import { saveToQueue } from '@/lib/offlineQueue'
+import { useCategories } from '@/hooks/useCategories'
 
-const defaultIncomeCats = [
-    { id: '1', name: 'Salário', icon: Receipt },
-    { id: '2', name: 'Alugueis', icon: Building },
-    { id: '3', name: 'Rendimentos', icon: PiggyBank },
-]
-
-const defaultExpenseCats = [
-    { id: '4', name: 'Contas', icon: Receipt },
-    { id: '5', name: 'Comida', icon: Utensils },
-    { id: '6', name: 'Transporte', icon: Car },
-    { id: '7', name: 'Saúde', icon: HeartPulse },
-    { id: '8', name: 'Compras', icon: ShoppingBag },
-]
+const iconMap: Record<string, LucideIcon> = {
+    tag: Tag,
+    utensils: Utensils,
+    home: Home,
+    car: Car,
+    receipt: Receipt,
+    'heart-pulse': HeartPulse,
+    'shopping-bag': ShoppingBag,
+    'piggy-bank': PiggyBank,
+    briefcase: Briefcase,
+    building: Building,
+    smartphone: Smartphone,
+    dumbbell: Dumbbell,
+    plane: Plane,
+    coffee: Coffee,
+    music: Music,
+    book: Book,
+    gift: Gift,
+    wrench: Wrench,
+    scissors: Scissors,
+    monitor: Monitor,
+    truck: Truck,
+    zap: Zap,
+    camera: Camera,
+    umbrella: Umbrella
+}
 
 export default function NewTransactionPage() {
     const router = useRouter()
@@ -26,16 +41,26 @@ export default function NewTransactionPage() {
     // SSOT: Vamos buscar transações ou criar novos lembretes via hook
     const { createTransaction } = useTransactions()
 
+    // SSOT: fetch categories from DB instead of hardcode
+    const { categories, loading: catsLoading } = useCategories()
+
     const type = searchParams.get('type') || 'expense'
     const isIncome = type === 'income'
     const colorBase = isIncome ? '#17B29F' : '#F03D1A'
 
-    const availableCats = isIncome ? defaultIncomeCats : defaultExpenseCats
+    const availableCats = categories.filter(c => c.type === (isIncome ? 'income' : 'expense'))
+    const initialCategoryId = searchParams.get('categoryId')
 
     // States
     const [amount, setAmount] = useState('0,00')
     const [description, setDescription] = useState('')
-    const [selectedCat, setSelectedCat] = useState(availableCats[0]?.id)
+    const [selectedCat, setSelectedCat] = useState<string>(initialCategoryId || '')
+
+    useEffect(() => {
+        if (!selectedCat && availableCats.length > 0) {
+            setSelectedCat(availableCats[0].id)
+        }
+    }, [availableCats, selectedCat])
 
     // Lembrete / Agendamento States
     const [isScheduled, setIsScheduled] = useState(false)
@@ -43,6 +68,7 @@ export default function NewTransactionPage() {
     const [isReminder, setIsReminder] = useState(false)
     const [frequency, setFrequency] = useState('Mensal')
     const [reminderTime, setReminderTime] = useState('09:00')
+    const [endDate, setEndDate] = useState('')
 
     const [submitting, setSubmitting] = useState(false)
 
@@ -74,13 +100,17 @@ export default function NewTransactionPage() {
             return
         }
 
-        const cat = availableCats.find(c => c.id === selectedCat)
-
         try {
             setSubmitting(true)
 
-            if (isScheduled || isReminder) {
-                // Delta Zero: Salva na nova tabela recurring_bills via API
+            // Delta Zero: Data futura → SEMPRE vai para Lembretes (não cria transação)
+            // Data de hoje ou passada (sem agendamento) → Transação imediata
+            const today = new Date().toISOString().split('T')[0]
+            const isFutureDate = dueDate > today
+            const shouldBeReminder = isScheduled || isReminder || isFutureDate
+
+            if (shouldBeReminder) {
+                // Salva na tabela recurring_bills via API
                 const res = await fetch('/api/reminders', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -89,21 +119,22 @@ export default function NewTransactionPage() {
                         amount: numericAmount,
                         type: isIncome ? 'income' : 'expense',
                         due_date: dueDate,
-                        frequency: isReminder ? frequency : 'Único', // Se não for repetição, é unico
-                        is_active: isReminder,
-                        category_id: null // Por hora, mockup category
+                        frequency: isReminder ? frequency : 'Único',
+                        is_active: true,
+                        end_date: isReminder && endDate ? endDate : null,
+                        category_id: selectedCat || null
                     })
                 })
 
                 if (!res.ok) throw new Error('Falha ao agendar.')
             } else {
-                // Lançamento imediato (Transação normal)
+                // Lançamento imediato (data de hoje ou passada) → Transação real
                 await createTransaction({
                     description: description,
                     amount: numericAmount,
                     type: isIncome ? 'income' : 'expense',
                     date: dueDate,
-                    category_id: null
+                    category_id: selectedCat || null
                 })
             }
 
@@ -111,6 +142,39 @@ export default function NewTransactionPage() {
             router.push('/')
         } catch (error) {
             console.error('Falha ao salvar:', error)
+
+            // Tratamento Offline
+            if (typeof navigator !== 'undefined' && !navigator.onLine) {
+                const today = new Date().toISOString().split('T')[0]
+                const isFutureDate = dueDate > today
+                const shouldBeReminder = isScheduled || isReminder || isFutureDate
+
+                if (shouldBeReminder) {
+                    saveToQueue('/api/reminders', 'POST', {
+                        description,
+                        amount: numericAmount,
+                        type: isIncome ? 'income' : 'expense',
+                        due_date: dueDate,
+                        frequency: isReminder ? frequency : 'Único',
+                        is_active: true,
+                        end_date: isReminder && endDate ? endDate : null,
+                        category_id: selectedCat || null
+                    })
+                } else {
+                    saveToQueue('/api/transactions', 'POST', {
+                        description,
+                        amount: numericAmount,
+                        type: isIncome ? 'income' : 'expense',
+                        date: dueDate,
+                        category_id: selectedCat || null
+                    })
+                }
+
+                alert('Você está offline. Lançamento salvo no cache para envio futuro.')
+                router.push('/')
+                return
+            }
+
             alert('Erro ao salvar lançamento.')
         } finally {
             setSubmitting(false)
@@ -167,21 +231,28 @@ export default function NewTransactionPage() {
                             <span className="text-[9px] font-bold text-slate-500 uppercase">CATEGORIA</span>
                         </div>
                         <div className="flex-1 overflow-y-auto overflow-x-hidden p-2 space-y-2">
-                            {availableCats.map(cat => (
-                                <button
-                                    key={cat.id}
-                                    onClick={() => setSelectedCat(cat.id)}
-                                    className={`w-full flex flex-col items-center justify-center p-3 rounded-lg border transition-all ${selectedCat === cat.id ? 'border-2 scale-100' : 'border-transparent hover:bg-slate-50 scale-95'}`}
-                                    style={{
-                                        borderColor: selectedCat === cat.id ? colorBase : 'transparent',
-                                        backgroundColor: selectedCat === cat.id ? `${colorBase}1A` : undefined
-                                    }}
-                                >
-                                    <cat.icon size={22} strokeWidth={selectedCat === cat.id ? 2.5 : 2} style={{ color: selectedCat === cat.id ? colorBase : '#64748b' }} />
-                                    <span style={{ color: selectedCat === cat.id ? colorBase : '#475569' }} className="text-[10px] font-bold mt-1 text-center w-full truncate leading-tight">{cat.name}</span>
-                                </button>
-                            ))}
-                            <button className="w-full flex flex-col items-center justify-center p-3 rounded-lg border border-dashed border-slate-300 bg-slate-50 hover:bg-slate-100 transition-all scale-95">
+                            {catsLoading ? (
+                                <div className="flex justify-center p-4">
+                                    <Loader2 size={24} className="animate-spin text-slate-400" />
+                                </div>
+                            ) : availableCats.map(cat => {
+                                const IconComp = iconMap[cat.icon] || Tag
+                                return (
+                                    <button
+                                        key={cat.id}
+                                        onClick={() => setSelectedCat(cat.id)}
+                                        className={`w-full flex flex-col items-center justify-center p-3 rounded-lg border transition-all ${selectedCat === cat.id ? 'border-2 scale-100' : 'border-transparent hover:bg-slate-50 scale-95'}`}
+                                        style={{
+                                            borderColor: selectedCat === cat.id ? cat.color : 'transparent',
+                                            backgroundColor: selectedCat === cat.id ? `${cat.color}1A` : undefined
+                                        }}
+                                    >
+                                        <IconComp size={22} strokeWidth={selectedCat === cat.id ? 2.5 : 2} style={{ color: selectedCat === cat.id ? cat.color : '#64748b' }} />
+                                        <span style={{ color: selectedCat === cat.id ? cat.color : '#475569' }} className="text-[10px] font-bold mt-1 text-center w-full truncate leading-tight">{cat.name}</span>
+                                    </button>
+                                )
+                            })}
+                            <button onClick={() => router.push('/categorias')} className="w-full flex flex-col items-center justify-center p-3 rounded-lg border border-dashed border-slate-300 bg-slate-50 hover:bg-slate-100 transition-all scale-95">
                                 <PlusCircle size={22} className="text-slate-400" />
                                 <span className="text-slate-500 text-[10px] font-bold mt-1 text-center leading-tight">Criar</span>
                             </button>
@@ -252,6 +323,17 @@ export default function NewTransactionPage() {
                                                     style={{ '--tw-ring-color': colorBase } as React.CSSProperties}
                                                 />
                                             </div>
+                                            <div className="space-y-1 mt-3 pt-3 border-t border-slate-100">
+                                                <span className="text-[10px] font-bold text-slate-400 ml-1">FIM DO LEMBRETE</span>
+                                                <p className="text-[10px] text-slate-400 ml-1 mb-1">Até quando este lembrete se repete? (ex: última parcela)</p>
+                                                <input
+                                                    type="date"
+                                                    value={endDate}
+                                                    onChange={(e) => setEndDate(e.target.value)}
+                                                    className="w-full text-sm font-semibold bg-white border border-slate-200 rounded-lg py-3 px-3 text-slate-700 focus:ring-1 outline-none"
+                                                    style={{ '--tw-ring-color': colorBase } as React.CSSProperties}
+                                                />
+                                            </div>
                                         </div>
                                     )}
                                 </div>
@@ -261,8 +343,8 @@ export default function NewTransactionPage() {
                 </div>
             </div>
 
-            {/* Bottom Actions Fixas */}
-            <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md p-4 bg-white border-t border-slate-100 flex gap-3 shadow-[0_-10px_40px_rgba(0,0,0,0.05)] z-20">
+            {/* Bottom Actions Fixas - acima do TabBar (72px) */}
+            <div className="fixed bottom-[72px] left-1/2 -translate-x-1/2 w-full max-w-md p-4 bg-white border-t border-slate-100 flex gap-3 shadow-[0_-10px_40px_rgba(0,0,0,0.05)] z-50">
                 <button
                     onClick={() => router.back()}
                     className="flex-1 py-4 px-4 rounded-xl border border-slate-200 text-slate-500 font-bold text-sm tracking-wide hover:bg-slate-50 transition-colors"
