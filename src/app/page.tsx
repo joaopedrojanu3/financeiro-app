@@ -272,7 +272,15 @@ function DashboardContent() {
               </div>
               <div className="flex justify-between items-center text-[9px] font-medium text-slate-500">
                 <span>Receitas: {fmt(income)}</span>
-                <span className="flex items-center gap-1"><CalendarClock size={9} /> {fmt(rendimentoMinimo)} <Minus size={9} /> {fmt(expense)}</span>
+                <span className="flex items-center gap-1"><CalendarClock size={9} /> Falta Pagar: {fmt(rendimentoMinimo)} <Minus size={9} /> Já Gasto: {fmt(expense)}</span>
+              </div>
+              <div className="flex justify-between items-center text-[10px] font-bold mt-1.5 pt-1.5 border-t border-slate-50">
+                <span className="text-slate-500">Status para Cobrir o Mês:</span>
+                <span className={isIncomeSufficient ? 'text-[#17B29F]' : 'text-[#F03D1A]'}>
+                  {isIncomeSufficient
+                    ? `Sobra ${fmt(income - rendimentoMinimoTotal)} livre`
+                    : `Falta ${fmt(rendimentoMinimoTotal - income)}`}
+                </span>
               </div>
             </div>
 
