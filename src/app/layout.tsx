@@ -28,6 +28,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="pt-BR" className={`${inter.variable}`}>
+      <head>
+        <link rel="manifest" href="/manifest.json" />
+        <meta name="theme-color" content="#17B29F" />
+      </head>
       <body className="bg-slate-50 text-slate-900 mx-auto max-w-md min-h-screen relative flex flex-col antialiased shadow-xl sm:overflow-hidden">
         {/* Usamos max-w-md para simular uma tela de celular no Desktop. Em mobile real ocupará 100%. */}
 
