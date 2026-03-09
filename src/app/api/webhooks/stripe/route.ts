@@ -2,14 +2,13 @@ import { NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { supabase } from '@/lib/supabase'
 
-// Instanciando Stripe
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
-    apiVersion: '2026-02-25.clover',
-})
-
-const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!
-
 export async function POST(req: Request) {
+    // Instanciando Stripe no momento da req para evitar erro no build time sem ENV
+    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string || 'sk_dummy', {
+        apiVersion: '2026-02-25.clover' as any,
+    })
+    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!
+
     try {
         const bodyText = await req.text()
         const signature = req.headers.get('stripe-signature') as string
