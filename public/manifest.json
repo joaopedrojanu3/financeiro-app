@@ -4,7 +4,7 @@
   "description": "App de gestão financeira familiar",
   "start_url": "/?source=pwa",
   "display": "standalone",
-  "background_color": "#E5F7F3",
+  "background_color": "#17B29F",
   "theme_color": "#17B29F",
   "icons": [
     {

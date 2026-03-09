@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { ChevronDown, SlidersHorizontal, ShoppingCart, Zap, Wallet, LucideIcon } from 'lucide-react'
 import { useTransactions } from '@/hooks/useTransactions'
 import { parseISO, format, isToday, isYesterday } from 'date-fns'
@@ -30,6 +30,7 @@ function cn(...inputs: (string | undefined | null | false)[]) {
 
 export default function ExtratoSheet({ isOpen, onClose }: { isOpen: boolean, onClose: () => void }) {
     const { transactions, loading } = useTransactions()
+    const [filterType, setFilterType] = useState<'all' | 'income' | 'expense'>('all')
 
     // Processa as transações para o formato de grupos por data
     const groupedTransactions = useMemo(() => {
@@ -38,6 +39,8 @@ export default function ExtratoSheet({ isOpen, onClose }: { isOpen: boolean, onC
         const groups: Record<string, Array<{ id: string, title: string, category: string, amount: number, icon: LucideIcon, color: string, bg: string, rawColor?: string }>> = {}
 
         transactions.forEach(t => {
+            if (filterType !== 'all' && t.type !== filterType) return;
+
             const date = parseISO(t.date)
             let dateLabel = ''
 
@@ -74,10 +77,11 @@ export default function ExtratoSheet({ isOpen, onClose }: { isOpen: boolean, onC
             items
         }))
 
-    }, [transactions])
+    }, [transactions, filterType])
 
-    const totalIncome = transactions.filter(t => t.type === 'income').reduce((acc, t) => acc + Number(t.amount), 0)
-    const totalExpense = transactions.filter(t => t.type === 'expense').reduce((acc, t) => acc + Number(t.amount), 0)
+    const filteredTransactions = transactions.filter(t => filterType === 'all' || t.type === filterType)
+    const totalIncome = filteredTransactions.filter(t => t.type === 'income').reduce((acc, t) => acc + Number(t.amount), 0)
+    const totalExpense = filteredTransactions.filter(t => t.type === 'expense').reduce((acc, t) => acc + Number(t.amount), 0)
     const saldoPeriodo = totalIncome - totalExpense
 
     return (
@@ -110,14 +114,13 @@ export default function ExtratoSheet({ isOpen, onClose }: { isOpen: boolean, onC
 
                     {/* Filtros */}
                     <div className="flex w-full gap-2 mb-6 mt-4">
-                        <button className="flex items-center gap-1 bg-[#45D1C0] text-white px-4 py-2 rounded-xl text-sm font-semibold shadow-sm text-nowrap">
-                            Este Mês <ChevronDown size={14} />
+                        <button className="flex items-center justify-center gap-1 bg-[#45D1C0] text-white px-4 py-2 rounded-xl text-sm font-semibold shadow-sm text-nowrap flex-1">
+                            Neste Mês <ChevronDown size={14} />
                         </button>
-                        <button className="flex flex-1 justify-center items-center gap-2 bg-slate-50 text-slate-600 px-4 py-2 rounded-xl text-sm font-semibold border border-slate-100">
-                            Categorias <SlidersHorizontal size={14} />
-                        </button>
-                        <button className="flex flex-1 justify-center items-center gap-1 bg-slate-50 text-slate-600 px-4 py-2 rounded-xl text-sm font-semibold border border-slate-100">
-                            Tipo <ChevronDown size={14} />
+                        <button
+                            onClick={() => setFilterType(prev => prev === 'all' ? 'income' : prev === 'income' ? 'expense' : 'all')}
+                            className="flex flex-1 justify-center items-center gap-1 bg-slate-50 text-slate-600 px-4 py-2 rounded-xl text-sm font-semibold border border-slate-100 min-w-[140px]">
+                            {filterType === 'all' ? 'Todos os Tipos' : filterType === 'income' ? 'Só Receitas' : 'Só Despesas'} <ChevronDown size={14} />
                         </button>
                     </div>
 
