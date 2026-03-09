@@ -2,11 +2,12 @@ import Link from 'next/link'
 import { login } from '../auth/actions'
 import { Wallet } from 'lucide-react'
 
-export default function LoginPage({
+export default async function LoginPage({
     searchParams,
 }: {
-    searchParams: { error?: string }
+    searchParams: Promise<{ error?: string }>
 }) {
+    const params = await searchParams
     return (
         <div className="flex flex-col items-center justify-center min-h-screen bg-slate-50 p-6">
             <div className="w-full max-w-sm flex flex-col items-center">
@@ -16,7 +17,7 @@ export default function LoginPage({
                 <h1 className="text-2xl font-extrabold text-slate-900 mb-2">Bem-vindo de volta!</h1>
                 <p className="text-sm font-medium text-slate-500 mb-8 text-center">Entre para acessar as finanças da família.</p>
 
-                {searchParams?.error === 'true' && (
+                {params?.error === 'true' && (
                     <div className="w-full bg-red-100 border border-red-200 text-red-600 text-sm font-bold p-3 rounded-lg mb-4 text-center">
                         Email ou senha inválidos. Tente novamente.
                     </div>

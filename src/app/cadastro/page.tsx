@@ -2,11 +2,12 @@ import Link from 'next/link'
 import { signup } from '../auth/actions'
 import { Wallet, UserPlus } from 'lucide-react'
 
-export default function CadastroPage({
+export default async function CadastroPage({
     searchParams,
 }: {
-    searchParams: { error?: string }
+    searchParams: Promise<{ error?: string }>
 }) {
+    const params = await searchParams
     return (
         <div className="flex flex-col items-center justify-center min-h-screen bg-slate-50 p-6">
             <div className="w-full max-w-sm flex flex-col items-center">
@@ -16,7 +17,7 @@ export default function CadastroPage({
                 <h1 className="text-2xl font-extrabold text-slate-900 mb-2">Criar perfil</h1>
                 <p className="text-sm font-medium text-slate-500 mb-8 text-center">Junte-se à família para gerenciar finanças facilmente.</p>
 
-                {searchParams?.error === 'true' && (
+                {params?.error === 'true' && (
                     <div className="w-full bg-red-100 border border-red-200 text-red-600 text-sm font-bold p-3 rounded-lg mb-4 text-center">
                         Ocorreu um erro no cadastro. Verifique os dados.
                     </div>

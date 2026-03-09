@@ -74,7 +74,7 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: error.message }, { status: 400 })
         }
 
-        revalidateTag('transactions')
+        // revalidateTag('transactions')
 
         return NextResponse.json({
             status: 'success',

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { Suspense, useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Calendar, ChevronLeft, Receipt, Utensils, Car, HeartPulse, ShoppingBag, PlusCircle, Loader2, Building, PiggyBank, Briefcase, Home, Tag, Smartphone, Dumbbell, Plane, Coffee, Music, Book, Gift, Wrench, Scissors, Monitor, Truck, Zap, Camera, Umbrella, LucideIcon } from 'lucide-react'
 import { useTransactions } from '@/hooks/useTransactions'
@@ -34,7 +34,7 @@ const iconMap: Record<string, LucideIcon> = {
     umbrella: Umbrella
 }
 
-export default function NewTransactionPage() {
+function NewTransactionForm() {
     const router = useRouter()
     const searchParams = useSearchParams()
 
@@ -365,5 +365,13 @@ export default function NewTransactionPage() {
             {/* Espaçamento extra para barra fixa */}
             <div className="h-[80px]"></div>
         </div>
+    )
+}
+
+export default function NewTransactionPage() {
+    return (
+        <Suspense fallback={<div className="flex h-screen w-full items-center justify-center bg-white"><Loader2 className="animate-spin text-slate-400" /></div>}>
+            <NewTransactionForm />
+        </Suspense>
     )
 }
