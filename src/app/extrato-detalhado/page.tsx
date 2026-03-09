@@ -41,6 +41,7 @@ export default function ExtratoDetalhadoPage() {
     const { categories, loading: loadingCat } = useCategories()
 
     const [expandedCats, setExpandedCats] = useState<Record<string, boolean>>({})
+    const [filterType, setFilterType] = useState<'all' | 'income' | 'expense'>('all')
 
     const currentMonthName = format(new Date(), 'MMMM', { locale: ptBR })
     const monthDisplay = currentMonthName.charAt(0).toUpperCase() + currentMonthName.slice(1)
@@ -64,6 +65,7 @@ export default function ExtratoDetalhadoPage() {
 
         transactions.forEach(t => {
             if (!isThisMonth(parseISO(t.date))) return
+            if (filterType !== 'all' && t.type !== filterType) return
 
             const amount = Number(t.amount)
             if (t.type === 'income') income += amount
@@ -102,7 +104,7 @@ export default function ExtratoDetalhadoPage() {
             balance: income - expense,
             groupedData: [...incomeGroups, ...expenseGroups] // Receitas primeiro, depois despesas
         }
-    }, [transactions, categories])
+    }, [transactions, categories, filterType])
 
     const fmt = (v: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v)
     const fmtShort = (v: number) => new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(v)
@@ -134,6 +136,15 @@ export default function ExtratoDetalhadoPage() {
                 <div className="bg-[#6DCFB6] text-white px-8 py-3 rounded-lg font-medium text-lg shadow-sm">
                     Balanço <span className="font-bold ml-1">{fmt(balance)}</span>
                 </div>
+            </div>
+
+            {/* Filtros */}
+            <div className="flex w-full gap-2 mb-6">
+                <button
+                    onClick={() => setFilterType(prev => prev === 'all' ? 'income' : prev === 'income' ? 'expense' : 'all')}
+                    className="flex flex-1 justify-center items-center gap-1 bg-white text-[#17B29F] px-4 py-2.5 rounded-xl text-sm font-bold shadow-sm border border-[#17B29F]/20 transition-all hover:bg-[#17B29F]/5 min-w-[140px]">
+                    {filterType === 'all' ? 'Ver Todos' : filterType === 'income' ? 'Apenas Receitas' : 'Apenas Despesas'} <ChevronDown size={14} />
+                </button>
             </div>
 
             {/* List */}
