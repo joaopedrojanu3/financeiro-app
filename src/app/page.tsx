@@ -150,21 +150,15 @@ function DashboardContent() {
 
         {/* Gráfico Metade Superior & Resumo Interno */}
         <div className="relative w-full aspect-square max-w-[300px] mx-auto mb-14 mt-8">
-          {loading ? (
-            <div className="absolute inset-0 flex items-center justify-center animate-pulse bg-slate-100/50 rounded-full">
-              <Wallet size={32} className="text-slate-300" />
-            </div>
-          ) : (
-            <ResponsiveContainer width="100%" height="100%" className="z-10 relative">
-              <PieChart>
-                <Pie data={chartData} innerRadius={105} outerRadius={125} paddingAngle={2} dataKey="value" stroke="none" cornerRadius={4}>
-                  {chartData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-              </PieChart>
-            </ResponsiveContainer>
-          )}
+          <ResponsiveContainer width="100%" height="100%" className="z-10 relative">
+            <PieChart>
+              <Pie data={chartData} innerRadius={105} outerRadius={125} paddingAngle={2} dataKey="value" stroke="none" cornerRadius={4}>
+                {chartData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={entry.color} />
+                ))}
+              </Pie>
+            </PieChart>
+          </ResponsiveContainer>
 
           {/* Linhas de conexão do gráfico para os ícones */}
           <div className="absolute inset-0 pointer-events-none z-0">

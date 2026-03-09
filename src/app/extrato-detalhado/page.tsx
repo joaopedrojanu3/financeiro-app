@@ -109,14 +109,6 @@ export default function ExtratoDetalhadoPage() {
     const fmt = (v: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v)
     const fmtShort = (v: number) => new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(v)
 
-    if (loadingTx || loadingCat) {
-        return (
-            <div className="flex h-screen w-full items-center justify-center bg-[#E5F7F3]">
-                <div className="w-8 h-8 rounded-full border-4 border-white border-t-[#17B29F] animate-spin" />
-            </div>
-        )
-    }
-
     return (
         <div className="flex flex-col w-full min-h-screen bg-[#E5F7F3] p-4 font-sans text-slate-800">
             {/* Header / Topbar */}

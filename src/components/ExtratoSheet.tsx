@@ -141,7 +141,6 @@ export default function ExtratoSheet({ isOpen, onClose }: { isOpen: boolean, onC
                     </div>
 
                     {/* Lista de Transações */}
-                    {loading && <div className="text-center text-sm text-slate-400 my-8">Carregando transações do servidor...</div>}
 
                     {!loading && groupedTransactions.length === 0 && (
                         <div className="text-center text-sm text-slate-400 my-8">
