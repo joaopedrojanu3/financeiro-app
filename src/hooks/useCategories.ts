@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react'
+import { useEffect } from 'react'
+import useSWR from 'swr'
 import { createClient } from '@/lib/supabase/client'
 import { getAdminHeaders } from '@/lib/apiClient'
 
@@ -15,36 +16,26 @@ export interface Category {
     updated_at?: string
 }
 
-export function useCategories() {
-    const [categories, setCategories] = useState<Category[]>([])
-    const [loading, setLoading] = useState(true)
+const fetcher = async (url: string) => {
+    const res = await fetch(url, { headers: getAdminHeaders() })
+    const json = await res.json()
+    return json.status === 'success' ? json.data : []
+}
 
-    const fetchCategories = async () => {
-        try {
-            setLoading(true)
-            const headers = getAdminHeaders()
-            const res = await fetch('/api/categories?limit=100', { headers })
-            const json = await res.json()
-            if (json.status === 'success') {
-                setCategories(json.data)
-            }
-        } catch (error) {
-            console.error('Error fetching categories:', error)
-        } finally {
-            setLoading(false)
-        }
-    }
+export function useCategories() {
+    const { data: categories, isLoading: loading, mutate } = useSWR<Category[]>('/api/categories?limit=100', fetcher, {
+        revalidateOnFocus: true,
+        revalidateIfStale: true
+    })
 
     useEffect(() => {
-        fetchCategories()
-
         // Realtime
         const channel = supabase.channel('public:categories')
             .on(
                 'postgres_changes',
                 { event: '*', schema: 'public', table: 'categories' },
                 () => {
-                    fetchCategories()
+                    mutate()
                 }
             )
             .subscribe()
@@ -52,7 +43,7 @@ export function useCategories() {
         return () => {
             supabase.removeChannel(channel)
         }
-    }, [])
+    }, [mutate])
 
     const toggleDashboardVisibility = async (id: string, currentVal: boolean) => {
         try {
@@ -62,7 +53,7 @@ export function useCategories() {
                 body: JSON.stringify({ show_on_dashboard: !currentVal })
             })
             if (!res.ok) throw new Error('Failed to update')
-            await fetchCategories()
+            await mutate()
         } catch (error) {
             console.error('Error toggling category visibility', error)
         }
@@ -75,7 +66,7 @@ export function useCategories() {
                 headers: getAdminHeaders()
             })
             if (!res.ok) throw new Error('Failed to delete')
-            await fetchCategories()
+            await mutate()
         } catch (error) {
             console.error('Error deleting category', error)
         }
@@ -89,18 +80,18 @@ export function useCategories() {
                 body: JSON.stringify(category)
             })
             if (!res.ok) throw new Error('Failed to create')
-            await fetchCategories()
+            await mutate()
         } catch (error) {
             console.error('Error creating category', error)
         }
     }
 
     return {
-        categories,
+        categories: categories || [],
         loading,
         toggleDashboardVisibility,
         deleteCategory,
         createCategory,
-        refresh: fetchCategories
+        refresh: mutate
     }
 }
