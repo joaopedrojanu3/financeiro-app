@@ -16,7 +16,7 @@ export async function PATCH(
 
         const { id } = await context.params
         const body = await req.json().catch(() => ({}))
-        const { occurrence_date } = body
+        const { occurrence_date, action } = body
 
         const { data: reminder, error: fetchErr } = await supabase
             .from('recurring_bills')
@@ -42,21 +42,23 @@ export async function PATCH(
             }
         }
 
-        const { error: txErr } = await supabase
-            .from('transactions')
-            .insert({
-                description: `[PAGO] ${reminder.description}`,
-                amount: reminder.amount,
-                type: reminder.type,
-                date: occurrence_date || new Date().toISOString().split('T')[0],
-                category_id: reminder.category_id,
-                status: 'completed',
-                user_id: userId
-            })
+        if (action !== 'skip') {
+            const { error: txErr } = await supabase
+                .from('transactions')
+                .insert({
+                    description: `[PAGO] ${reminder.description}`,
+                    amount: reminder.amount,
+                    type: reminder.type,
+                    date: occurrence_date || new Date().toISOString().split('T')[0],
+                    category_id: reminder.category_id,
+                    status: 'completed',
+                    user_id: userId
+                })
 
-        if (txErr) {
-            console.error('Erro ao criar transação:', txErr)
-            return NextResponse.json({ error: txErr.message }, { status: 500 })
+            if (txErr) {
+                console.error('Erro ao criar transação:', txErr)
+                return NextResponse.json({ error: txErr.message }, { status: 500 })
+            }
         }
 
         const { error: payErr } = await supabase
@@ -75,7 +77,39 @@ export async function PATCH(
         revalidatePath('/')
         revalidatePath('/lembretes')
 
-        return NextResponse.json({ success: true, message: 'Parcela marcada como paga e transação criada.' })
+        return NextResponse.json({ success: true, message: action === 'skip' ? 'Parcela pulada com sucesso.' : 'Parcela marcada como paga e transação criada.' })
+    } catch {
+        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
+    }
+}
+
+export async function DELETE(
+    req: NextRequest,
+    context: { params: Promise<{ id: string }> }
+) {
+    try {
+        const userId = await getAuthorizedUserId(req)
+        if (!userId) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+        }
+
+        const supabase = await createClient()
+        const { id } = await context.params
+
+        const { error } = await supabase
+            .from('recurring_bills')
+            .delete()
+            .eq('id', id)
+            .eq('user_id', userId)
+
+        if (error) {
+            return NextResponse.json({ error: error.message }, { status: 400 })
+        }
+
+        revalidatePath('/')
+        revalidatePath('/lembretes')
+
+        return NextResponse.json({ success: true, message: 'Lembrete excluído com sucesso.' })
     } catch {
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
     }

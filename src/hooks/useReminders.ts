@@ -15,6 +15,7 @@ export type Reminder = {
         color: string
         icon: string
     } | null
+    category_id?: string
 }
 
 export type BillPayment = {
@@ -65,5 +66,67 @@ export function useReminders() {
         mutatePayments()
     }
 
-    return { reminders: reminders || [], payments: payments || [], loading, refetch: refetchAll, isOccurrencePaid }
+    const skipOccurrence = async (id: string, dateStr: string) => {
+        const res = await fetch(`/api/reminders/${id}`, {
+            method: 'PATCH',
+            headers: getAdminHeaders(),
+            body: JSON.stringify({ occurrence_date: dateStr, action: 'skip' })
+        })
+        if (!res.ok) throw new Error('Erro ao pular/excluir parcela')
+        refetchAll()
+    }
+
+    const deleteReminder = async (id: string) => {
+        const res = await fetch(`/api/reminders/${id}`, {
+            method: 'DELETE',
+            headers: getAdminHeaders()
+        })
+        if (!res.ok) throw new Error('Erro ao excluir série')
+        refetchAll()
+    }
+
+    const bulkSkipOccurrences = async (items: { id: string, occurrence_date: string }[]) => {
+        const res = await fetch(`/api/reminders/bulk-delete`, {
+            method: 'POST',
+            headers: getAdminHeaders(),
+            body: JSON.stringify({ items })
+        })
+        if (!res.ok) throw new Error('Erro excluir parcelas lote')
+        refetchAll()
+    }
+
+    const updateOccurrence = async (originalId: string, occurrenceDate: string, newData: any) => {
+        // 1. Skip the original occurrence
+        await skipOccurrence(originalId, occurrenceDate)
+
+        // 2. Create a new single reminder for that specific modification
+        const res = await fetch('/api/reminders', {
+            method: 'POST',
+            headers: getAdminHeaders(),
+            body: JSON.stringify({
+                ...newData,
+                dueDate: newData.dueDate || occurrenceDate, // use the provided date
+                frequency: 'Único' // single occurrence replacing the specific month
+            })
+        })
+
+        if (!res.ok) {
+            const err = await res.json()
+            throw new Error(err.error || 'Erro ao criar edição da parcela')
+        }
+
+        refetchAll()
+    }
+
+    return { 
+        reminders: reminders || [], 
+        payments: payments || [], 
+        loading, 
+        refetch: refetchAll, 
+        isOccurrencePaid,
+        skipOccurrence,
+        deleteReminder,
+        bulkSkipOccurrences,
+        updateOccurrence
+    }
 }

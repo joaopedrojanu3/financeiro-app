@@ -1,13 +1,14 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { CalendarClock, Plus, Calendar as CalendarIcon, Wallet, CheckCircle2, Loader2 } from 'lucide-react'
+import { CalendarClock, Plus, Calendar as CalendarIcon, Wallet, CheckCircle2, Loader2, CheckSquare, Square, Trash2 } from 'lucide-react'
 import Link from 'next/link'
 import { useReminders, Reminder } from '@/hooks/useReminders'
 import { format, parseISO, isThisMonth, addDays, addWeeks, addMonths, addYears, isAfter, startOfDay } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import TabBar from '@/components/layout/TabBar'
 import { getAdminHeaders } from '@/lib/apiClient'
+import EditReminderSheet from '@/components/EditReminderSheet'
 
 type ExpandedBill = {
     reminder: Reminder
@@ -93,9 +94,17 @@ function countOccurrences(start: Date, end: Date, frequency: string): number {
 }
 
 export default function RemindersPage() {
-    const { reminders, loading, refetch, isOccurrencePaid } = useReminders()
+    const { reminders, loading, refetch, isOccurrencePaid, skipOccurrence, deleteReminder, bulkSkipOccurrences, updateOccurrence } = useReminders()
     const [filter, setFilter] = useState<'all' | 'thisMonth' | 'done'>('thisMonth')
     const [payingKey, setPayingKey] = useState<string | null>(null)
+
+    // Selection mode state
+    const [isSelectionMode, setIsSelectionMode] = useState(false)
+    const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set())
+    const [isDeletingBulk, setIsDeletingBulk] = useState(false)
+
+    // Edit sheet state
+    const [editingBill, setEditingBill] = useState<ExpandedBill | null>(null)
 
     // Expande todos os lembretes ativos em parcelas individuais
     const allBills = useMemo(() => {
@@ -140,6 +149,39 @@ export default function RemindersPage() {
         }
     }
 
+    const toggleSelectionMode = () => {
+        setIsSelectionMode(!isSelectionMode)
+        setSelectedKeys(new Set())
+    }
+
+    const toggleSelection = (key: string) => {
+        const newSet = new Set(selectedKeys)
+        if (newSet.has(key)) newSet.delete(key)
+        else newSet.add(key)
+        setSelectedKeys(newSet)
+    }
+
+    const handleBulkDelete = async () => {
+        if (selectedKeys.size === 0) return
+        if (!confirm(`Deseja excluir as ${selectedKeys.size} parcelas selecionadas?`)) return
+        
+        setIsDeletingBulk(true)
+        try {
+            const items = Array.from(selectedKeys).map(key => {
+                const [id, ...dateParts] = key.split('-')
+                return { id, occurrence_date: dateParts.join('-') }
+            })
+            await bulkSkipOccurrences(items)
+            setIsSelectionMode(false)
+            setSelectedKeys(new Set())
+        } catch (error) {
+            console.error(error)
+            alert('Erro ao excluir parcelas em lote.')
+        } finally {
+            setIsDeletingBulk(false)
+        }
+    }
+
     const totalPendente = pendingBills.reduce((acc, b) => acc + Number(b.reminder.amount), 0)
 
     return (
@@ -165,17 +207,24 @@ export default function RemindersPage() {
                 </div>
             </div>
 
-            {/* Filtros */}
-            <div className="w-full flex gap-2 px-4 mt-6 overflow-x-auto pb-2 scrollbar-hide">
-                <button onClick={() => setFilter('all')} className={`px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap transition-colors ${filter === 'all' ? 'bg-slate-800 text-white' : 'bg-white text-slate-500 border border-slate-200'}`}>
-                    Todas Contas
-                </button>
-                <button onClick={() => setFilter('thisMonth')} className={`px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap transition-colors ${filter === 'thisMonth' ? 'bg-[#F03D1A] text-white' : 'bg-white text-slate-500 border border-slate-200'}`}>
-                    Este Mês
-                </button>
-                <button onClick={() => setFilter('done')} className={`px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap transition-colors ${filter === 'done' ? 'bg-[#17B29F] text-white' : 'bg-white text-slate-500 border border-slate-200'}`}>
-                    Finalizadas ({paidBills.length})
-                </button>
+            {/* Filtros e Controles */}
+            <div className="w-full flex items-center justify-between px-4 mt-6">
+                <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide flex-1">
+                    <button onClick={() => setFilter('all')} className={`px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap transition-colors ${filter === 'all' ? 'bg-slate-800 text-white' : 'bg-white text-slate-500 border border-slate-200'}`}>
+                        Todas
+                    </button>
+                    <button onClick={() => setFilter('thisMonth')} className={`px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap transition-colors ${filter === 'thisMonth' ? 'bg-[#F03D1A] text-white' : 'bg-white text-slate-500 border border-slate-200'}`}>
+                        Mês
+                    </button>
+                    <button onClick={() => setFilter('done')} className={`px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap transition-colors ${filter === 'done' ? 'bg-[#17B29F] text-white' : 'bg-white text-slate-500 border border-slate-200'}`}>
+                        Pagas ({paidBills.length})
+                    </button>
+                </div>
+                {pendingBills.length > 0 && filter !== 'done' && (
+                    <button onClick={toggleSelectionMode} className={`ml-2 px-3 py-2 rounded-full text-xs font-bold whitespace-nowrap transition-colors ${isSelectionMode ? 'bg-[#F03D1A] text-white' : 'bg-slate-100 text-slate-500'}`}>
+                        {isSelectionMode ? 'Cancelar' : 'Selecionar'}
+                    </button>
+                )}
             </div>
 
             {/* Lista */}
@@ -235,8 +284,16 @@ export default function RemindersPage() {
                         return bills.map((bill, idx) => {
                             const key = `${bill.reminder.id}-${bill.occurrenceDateStr}`
                             return (
-                                <div key={`pending-${key}-${idx}`} className="bg-white p-4 rounded-2xl border border-slate-100 flex items-center justify-between shadow-sm hover:shadow-md transition-shadow">
+                                <div key={`pending-${key}-${idx}`} 
+                                    onClick={() => isSelectionMode ? toggleSelection(key) : setEditingBill(bill)}
+                                    className={`bg-white p-4 rounded-2xl border flex items-center justify-between shadow-sm hover:shadow-md transition-all cursor-pointer ${isSelectionMode && selectedKeys.has(key) ? 'border-[#F03D1A] ring-2 ring-[#F03D1A]/20' : 'border-slate-100'}`}
+                                >
                                     <div className="flex items-center gap-3">
+                                        {isSelectionMode && (
+                                            <div className="mr-1 text-slate-400">
+                                                {selectedKeys.has(key) ? <CheckSquare size={20} className="text-[#F03D1A]" /> : <Square size={20} />}
+                                            </div>
+                                        )}
                                         <div className={`w-11 h-11 rounded-full flex items-center justify-center flex-shrink-0 ${bill.reminder.type === 'expense' ? 'bg-red-50 text-red-500' : 'bg-emerald-50 text-emerald-500'}`}>
                                             {bill.reminder.categories?.icon === 'wallet' ? <Wallet size={20} /> : <CalendarClock size={20} />}
                                         </div>
@@ -253,14 +310,16 @@ export default function RemindersPage() {
                                             {bill.reminder.type === 'expense' ? '-' : '+'} R$ {Number(bill.reminder.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                         </span>
                                         <span className="text-[9px] font-bold text-slate-400 uppercase bg-slate-100 px-2 py-0.5 rounded-md">{bill.reminder.frequency}</span>
-                                        <button
-                                            onClick={() => handleMarkAsPaid(bill)}
-                                            disabled={payingKey === key}
-                                            className="mt-1 flex items-center gap-1 text-[10px] font-bold text-white bg-[#17B29F] px-3 py-1.5 rounded-lg hover:bg-[#149485] transition-colors disabled:opacity-50"
-                                        >
-                                            {payingKey === key ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle2 size={12} />}
-                                            {payingKey === key ? 'Pagando...' : 'Pagar'}
-                                        </button>
+                                        {!isSelectionMode && (
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); handleMarkAsPaid(bill); }}
+                                                disabled={payingKey === key}
+                                                className="mt-1 flex items-center gap-1 text-[10px] font-bold text-white bg-[#17B29F] px-3 py-1.5 rounded-lg hover:bg-[#149485] transition-colors disabled:opacity-50"
+                                            >
+                                                {payingKey === key ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle2 size={12} />}
+                                                {payingKey === key ? 'Pagando...' : 'Pagar'}
+                                            </button>
+                                        )}
                                     </div>
                                 </div>
                             )
@@ -269,10 +328,32 @@ export default function RemindersPage() {
                 )}
             </div>
 
-            {/* FAB */}
-            <Link href="/lancamento/novo" className="fixed bottom-24 right-4 w-14 h-14 bg-slate-900 text-white rounded-full flex items-center justify-center shadow-xl hover:scale-105 transition-transform z-40">
-                <Plus size={24} />
-            </Link>
+            {/* FAB ou Bulk Actions */}
+            {isSelectionMode ? (
+                <div className="fixed bottom-20 left-0 right-0 p-4 z-40">
+                    <button
+                        onClick={handleBulkDelete}
+                        disabled={selectedKeys.size === 0 || isDeletingBulk}
+                        className="w-full bg-[#F03D1A] text-white font-bold py-4 rounded-2xl shadow-xl flex items-center justify-center gap-2 hover:bg-red-600 disabled:opacity-50 disabled:bg-slate-400 transition-colors"
+                    >
+                        {isDeletingBulk ? <Loader2 size={24} className="animate-spin" /> : <Trash2 size={24} />}
+                        {isDeletingBulk ? 'Excluindo...' : `Excluir ${selectedKeys.size} Selecionados`}
+                    </button>
+                </div>
+            ) : (
+                <Link href="/lancamento/novo" className="fixed bottom-24 right-4 w-14 h-14 bg-slate-900 text-white rounded-full flex items-center justify-center shadow-xl hover:scale-105 transition-transform z-40">
+                    <Plus size={24} />
+                </Link>
+            )}
+
+            <EditReminderSheet
+                bill={editingBill}
+                isOpen={!!editingBill}
+                onClose={() => setEditingBill(null)}
+                onUpdate={updateOccurrence}
+                onDeleteSingle={skipOccurrence}
+                onDeleteSeries={deleteReminder}
+            />
 
             <TabBar />
         </div>
