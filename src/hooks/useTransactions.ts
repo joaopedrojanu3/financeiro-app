@@ -71,11 +71,34 @@ export function useTransactions() {
         return await response.json()
     }
 
+    const updateTransaction = async (id: string, data: Partial<Transaction>) => {
+        const response = await fetch(`/api/transactions/${id}`, {
+            method: 'PUT',
+            headers: getAdminHeaders(),
+            body: JSON.stringify(data)
+        })
+
+        if (!response.ok) throw new Error('Erro ao atualizar transação')
+        return await response.json()
+    }
+
+    const deleteTransaction = async (id: string) => {
+        const response = await fetch(`/api/transactions/${id}`, {
+            method: 'DELETE',
+            headers: getAdminHeaders()
+        })
+
+        if (!response.ok) throw new Error('Erro ao excluir transação')
+        return await response.json()
+    }
+
     return {
         transactions: transactions || [],
         loading,
         error: error ? error.message : null,
         createTransaction,
+        updateTransaction,
+        deleteTransaction,
         refetch: mutate
     }
 }

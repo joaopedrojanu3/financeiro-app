@@ -7,6 +7,7 @@ import { useTransactions } from '@/hooks/useTransactions'
 import { useCategories } from '@/hooks/useCategories'
 import { isThisMonth, parseISO, format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
+import EditTransactionSheet from '@/components/EditTransactionSheet'
 
 const iconMap: Record<string, LucideIcon> = {
     tag: Tag,
@@ -42,6 +43,7 @@ export default function ExtratoDetalhadoPage() {
 
     const [expandedCats, setExpandedCats] = useState<Record<string, boolean>>({})
     const [filterType, setFilterType] = useState<'all' | 'income' | 'expense'>('all')
+    const [editingTxId, setEditingTxId] = useState<string | null>(null)
 
     const currentMonthName = format(new Date(), 'MMMM', { locale: ptBR })
     const monthDisplay = currentMonthName.charAt(0).toUpperCase() + currentMonthName.slice(1)
@@ -180,7 +182,7 @@ export default function ExtratoDetalhadoPage() {
                             {isExpanded && (
                                 <div className="flex flex-col pl-16 pr-1 pt-1 pb-3 gap-2 border-l-2 ml-4 mb-2 mt-1" style={{ borderColor: group.color }}>
                                     {group.transactions.map((tx, idx) => (
-                                        <div key={tx.id || idx} className="flex justify-between items-center text-sm py-1">
+                                        <div key={tx.id || idx} onClick={() => setEditingTxId(tx.id)} className="flex justify-between items-center text-sm py-2 cursor-pointer hover:bg-white/50 transition-colors rounded-lg px-2 -mx-2">
                                             <div className="flex flex-col">
                                                 <span className="text-slate-600 font-medium truncate max-w-[150px]">{tx.description}</span>
                                                 <span className="text-[10px] text-slate-400">{format(parseISO(tx.date), 'dd/MM/yyyy')}</span>
@@ -216,6 +218,11 @@ export default function ExtratoDetalhadoPage() {
                 </button>
             </div>
 
+            <EditTransactionSheet 
+                transaction={transactions.find(t => String(t.id) === String(editingTxId)) || null} 
+                isOpen={!!editingTxId} 
+                onClose={() => setEditingTxId(null)} 
+            />
         </div>
     )
 }

@@ -2,9 +2,10 @@
 
 import { useMemo, useState } from 'react'
 import { ChevronDown, SlidersHorizontal, ShoppingCart, Zap, Wallet, LucideIcon } from 'lucide-react'
-import { useTransactions } from '@/hooks/useTransactions'
+import { useTransactions, Transaction } from '@/hooks/useTransactions'
 import { parseISO, format, isToday, isYesterday } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
+import EditTransactionSheet from './EditTransactionSheet'
 
 const categoryIcons: Record<string, LucideIcon> = {
     'shopping-cart': ShoppingCart,
@@ -31,6 +32,7 @@ function cn(...inputs: (string | undefined | null | false)[]) {
 export default function ExtratoSheet({ isOpen, onClose }: { isOpen: boolean, onClose: () => void }) {
     const { transactions, loading } = useTransactions()
     const [filterType, setFilterType] = useState<'all' | 'income' | 'expense'>('all')
+    const [editingTxId, setEditingTxId] = useState<string | null>(null)
 
     // Processa as transações para o formato de grupos por data
     const groupedTransactions = useMemo(() => {
@@ -158,7 +160,7 @@ export default function ExtratoSheet({ isOpen, onClose }: { isOpen: boolean, onC
 
                                     <div className="flex flex-col gap-5">
                                         {group.items.map((item) => (
-                                            <div key={item.id} className="flex items-center justify-between w-full">
+                                            <div key={item.id} onClick={() => setEditingTxId(item.id)} className="flex items-center justify-between w-full cursor-pointer hover:bg-slate-50 p-2 -mx-2 rounded-xl transition-colors">
                                                 <div className="flex items-center gap-4">
                                                     {/* Icon Base */}
                                                     <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${item.bg}`} style={item.rawColor ? { backgroundColor: `${item.rawColor}20` } : {}}>
@@ -193,6 +195,12 @@ export default function ExtratoSheet({ isOpen, onClose }: { isOpen: boolean, onC
 
                 </div>
             </div>
+
+            <EditTransactionSheet 
+                transaction={transactions.find(t => String(t.id) === String(editingTxId)) || null} 
+                isOpen={!!editingTxId} 
+                onClose={() => setEditingTxId(null)} 
+            />
         </>
     )
 }
