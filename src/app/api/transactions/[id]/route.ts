@@ -3,7 +3,7 @@ import { createClient, getAuthorizedUserId } from '@/lib/supabase/server'
 
 export async function PUT(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    context: { params: Promise<{ id: string }> }
 ) {
     try {
         const userId = await getAuthorizedUserId(request)
@@ -12,7 +12,7 @@ export async function PUT(
         }
 
         const supabase = await createClient()
-        const { id } = params
+        const { id } = await context.params
         const body = await request.json()
 
         const updateData: any = {}
@@ -49,7 +49,7 @@ export async function PUT(
 
 export async function DELETE(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    context: { params: Promise<{ id: string }> }
 ) {
     try {
         const userId = await getAuthorizedUserId(request)
@@ -58,7 +58,7 @@ export async function DELETE(
         }
 
         const supabase = await createClient()
-        const { id } = params
+        const { id } = await context.params
 
         const { error } = await supabase
             .from('transactions')
