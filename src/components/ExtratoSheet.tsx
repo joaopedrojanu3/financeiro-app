@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { ChevronDown, SlidersHorizontal, ShoppingCart, Zap, Wallet, LucideIcon } from 'lucide-react'
+import { ChevronDown, SlidersHorizontal, ShoppingCart, Zap, Wallet, LucideIcon, Pencil } from 'lucide-react'
 import { useTransactions, Transaction } from '@/hooks/useTransactions'
 import { parseISO, format, isToday, isYesterday } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -160,7 +160,7 @@ export default function ExtratoSheet({ isOpen, onClose }: { isOpen: boolean, onC
 
                                     <div className="flex flex-col gap-5">
                                         {group.items.map((item) => (
-                                            <div key={item.id} onClick={() => setEditingTxId(item.id)} className="flex items-center justify-between w-full cursor-pointer hover:bg-slate-50 p-2 -mx-2 rounded-xl transition-colors">
+                                            <div key={item.id} onClick={() => setEditingTxId(item.id)} className="flex items-center justify-between w-full cursor-pointer hover:bg-slate-50 p-2 -mx-2 rounded-xl transition-colors group">
                                                 <div className="flex items-center gap-4">
                                                     {/* Icon Base */}
                                                     <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${item.bg}`} style={item.rawColor ? { backgroundColor: `${item.rawColor}20` } : {}}>
@@ -172,14 +172,17 @@ export default function ExtratoSheet({ isOpen, onClose }: { isOpen: boolean, onC
                                                         <span className="text-[11px] font-medium text-slate-400">{item.category}</span>
                                                     </div>
                                                 </div>
-                                                {/* Valor */}
-                                                <div className="flex items-center">
+                                                {/* Valor e Edit */}
+                                                <div className="flex items-center gap-3">
                                                     <span
                                                         className={`text-[15px] font-bold ${item.amount > 0 ? 'text-[#17B29F]' : 'text-[#F03D1A]'
                                                             }`}
                                                     >
                                                         {item.amount > 0 ? '+' : '-'} R$ {Math.abs(item.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                                     </span>
+                                                    <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 group-hover:bg-slate-200 group-hover:text-slate-600 transition-colors shrink-0">
+                                                        <Pencil size={14} />
+                                                    </div>
                                                 </div>
                                             </div>
                                         ))}

@@ -2,7 +2,7 @@
 
 import React, { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Tag, Utensils, Home, Car, Receipt, HeartPulse, ShoppingBag, PiggyBank, Briefcase, Building, Smartphone, Dumbbell, Plane, Coffee, Music, Book, Gift, Wrench, Scissors, Monitor, Truck, Zap, Camera, Umbrella, LucideIcon, ChevronDown, ChevronRight } from 'lucide-react'
+import { ArrowLeft, Tag, Utensils, Home, Car, Receipt, HeartPulse, ShoppingBag, PiggyBank, Briefcase, Building, Smartphone, Dumbbell, Plane, Coffee, Music, Book, Gift, Wrench, Scissors, Monitor, Truck, Zap, Camera, Umbrella, LucideIcon, ChevronDown, ChevronRight, Pencil } from 'lucide-react'
 import { useTransactions } from '@/hooks/useTransactions'
 import { useCategories } from '@/hooks/useCategories'
 import { isThisMonth, parseISO, format } from 'date-fns'
@@ -182,14 +182,19 @@ export default function ExtratoDetalhadoPage() {
                             {isExpanded && (
                                 <div className="flex flex-col pl-16 pr-1 pt-1 pb-3 gap-2 border-l-2 ml-4 mb-2 mt-1" style={{ borderColor: group.color }}>
                                     {group.transactions.map((tx, idx) => (
-                                        <div key={tx.id || idx} onClick={() => setEditingTxId(tx.id)} className="flex justify-between items-center text-sm py-2 cursor-pointer hover:bg-white/50 transition-colors rounded-lg px-2 -mx-2">
+                                        <div key={tx.id || idx} onClick={() => setEditingTxId(tx.id)} className="flex justify-between items-center text-sm py-2 cursor-pointer hover:bg-white/50 transition-colors rounded-lg px-2 -mx-2 group">
                                             <div className="flex flex-col">
                                                 <span className="text-slate-600 font-medium truncate max-w-[150px]">{tx.description}</span>
                                                 <span className="text-[10px] text-slate-400">{format(parseISO(tx.date), 'dd/MM/yyyy')}</span>
                                             </div>
-                                            <span className={`font-medium ${amountColor}`}>
-                                                {fmtShort(Number(tx.amount))}
-                                            </span>
+                                            <div className="flex items-center gap-3">
+                                                <span className={`font-medium ${amountColor}`}>
+                                                    {fmtShort(Number(tx.amount))}
+                                                </span>
+                                                <div className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 group-hover:bg-slate-200 group-hover:text-slate-600 transition-colors shrink-0">
+                                                    <Pencil size={12} />
+                                                </div>
+                                            </div>
                                         </div>
                                     ))}
                                 </div>
