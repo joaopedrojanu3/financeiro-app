@@ -4,7 +4,7 @@ import { useState, useMemo } from 'react'
 import { CalendarClock, Plus, Calendar as CalendarIcon, Wallet, CheckCircle2, Loader2, CheckSquare, Square, Trash2 } from 'lucide-react'
 import Link from 'next/link'
 import { useReminders, Reminder } from '@/hooks/useReminders'
-import { format, parseISO, isThisMonth, addDays, addWeeks, addMonths, addYears, isAfter, startOfDay } from 'date-fns'
+import { format, parseISO, isThisMonth, addDays, addWeeks, addMonths, addYears, isAfter, startOfDay, isSameMonth } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import TabBar from '@/components/layout/TabBar'
 import { getAdminHeaders } from '@/lib/apiClient'
@@ -95,7 +95,8 @@ function countOccurrences(start: Date, end: Date, frequency: string): number {
 
 export default function RemindersPage() {
     const { reminders, loading, refetch, isOccurrencePaid, skipOccurrence, deleteReminder, bulkSkipOccurrences, updateOccurrence } = useReminders()
-    const [filter, setFilter] = useState<'all' | 'thisMonth' | 'done'>('thisMonth')
+    const [filter, setFilter] = useState<'all' | 'thisMonth' | 'done' | 'customMonth'>('thisMonth')
+    const [selectedMonth, setSelectedMonth] = useState<string>(format(new Date(), 'yyyy-MM'))
     const [payingKey, setPayingKey] = useState<string | null>(null)
 
     // Selection mode state
@@ -219,6 +220,15 @@ export default function RemindersPage() {
                     <button onClick={() => setFilter('done')} className={`px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap transition-colors ${filter === 'done' ? 'bg-[#17B29F] text-white' : 'bg-white text-slate-500 border border-slate-200'}`}>
                         Pagas ({paidBills.length})
                     </button>
+                    <input 
+                        type="month" 
+                        value={selectedMonth}
+                        onChange={(e) => {
+                            setSelectedMonth(e.target.value)
+                            setFilter('customMonth')
+                        }}
+                        className={`px-3 py-1.5 rounded-full text-xs font-bold transition-colors outline-none cursor-pointer ${filter === 'customMonth' ? 'bg-slate-800 text-white' : 'bg-white text-slate-500 border border-slate-200'}`}
+                    />
                 </div>
                 {pendingBills.length > 0 && filter !== 'done' && (
                     <button onClick={toggleSelectionMode} className={`ml-2 px-3 py-2 rounded-full text-xs font-bold whitespace-nowrap transition-colors ${isSelectionMode ? 'bg-[#F03D1A] text-white' : 'bg-slate-100 text-slate-500'}`}>
@@ -267,6 +277,11 @@ export default function RemindersPage() {
                     (() => {
                         const bills = filter === 'thisMonth'
                             ? pendingBills.filter(b => isThisMonth(b.occurrenceDate))
+                            : filter === 'customMonth' && selectedMonth
+                            ? pendingBills.filter(b => {
+                                const [year, month] = selectedMonth.split('-');
+                                return isSameMonth(b.occurrenceDate, new Date(parseInt(year), parseInt(month) - 1));
+                              })
                             : pendingBills
 
                         if (bills.length === 0) {
@@ -274,7 +289,7 @@ export default function RemindersPage() {
                                 <div className="flex flex-col items-center justify-center bg-white p-8 rounded-2xl border border-dashed border-slate-200 mt-4 text-center">
                                     <CalendarIcon size={48} className="text-slate-200 mb-3" />
                                     <h3 className="text-sm font-bold text-slate-700">
-                                        {filter === 'thisMonth' ? 'Nenhuma conta para este mês' : 'Nenhuma conta futura'}
+                                        {filter === 'thisMonth' ? 'Nenhuma conta para este mês' : filter === 'customMonth' ? 'Nenhuma conta para o mês selecionado' : 'Nenhuma conta futura'}
                                     </h3>
                                     <p className="text-[11px] font-medium text-slate-400 mt-1">Crie um lançamento agendado para ver as parcelas aqui.</p>
                                 </div>
