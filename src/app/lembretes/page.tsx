@@ -41,9 +41,10 @@ function expandReminder(r: Reminder, isOccurrencePaid: (id: string, date: string
     }
 
     // RECORRENTE: expande todas as parcelas futuras
-    const maxOccurrences = 60
+    const maxOccurrences = 2400 // limite seguro de iterações (200 anos)
     let current = start
     let index = 1
+    let futureCount = 0
 
     while (index <= maxOccurrences) {
         if (end && isAfter(current, end)) break
@@ -60,7 +61,13 @@ function expandReminder(r: Reminder, isOccurrencePaid: (id: string, date: string
                 label: totalParcelas ? `Parcela ${index}/${totalParcelas}` : 'Recorrente',
                 isPaid: paid
             })
+            if (current >= today) {
+                futureCount++
+            }
         }
+        
+        // Limita a 120 parcelas projetadas para o futuro (10 anos)
+        if (futureCount > 120) break
 
         switch (r.frequency) {
             case 'Diário': current = addDays(current, 1); break
@@ -183,7 +190,18 @@ export default function RemindersPage() {
         }
     }
 
-    const totalPendente = pendingBills.reduce((acc, b) => acc + Number(b.reminder.amount), 0)
+    const displayedBills = useMemo(() => {
+        if (filter === 'done') return paidBills
+        if (filter === 'thisMonth') return pendingBills.filter(b => isThisMonth(b.occurrenceDate))
+        if (filter === 'customMonth' && selectedMonth) {
+            return pendingBills.filter(b => b.occurrenceDateStr.startsWith(selectedMonth))
+        }
+        return pendingBills
+    }, [filter, pendingBills, paidBills, selectedMonth])
+
+    const totalDespesas = displayedBills.filter(b => b.reminder.type === 'expense').reduce((acc, b) => acc + Number(b.reminder.amount), 0)
+    const totalReceitas = displayedBills.filter(b => b.reminder.type === 'income').reduce((acc, b) => acc + Number(b.reminder.amount), 0)
+    const totalDisplayed = totalReceitas - totalDespesas
 
     return (
         <div className="flex flex-col w-full h-full pb-24 items-center bg-slate-50/50 min-h-[calc(100vh-64px)] pt-16">
@@ -198,11 +216,26 @@ export default function RemindersPage() {
             <div className="w-full px-4 mt-6">
                 <div className="flex w-full justify-between items-center bg-[#45D1C0] rounded-2xl p-5 shadow-lg shadow-[#45D1C0]/20 text-white relative overflow-hidden">
                     <div className="z-10 flex flex-col">
-                        <span className="text-[10px] font-bold tracking-widest uppercase opacity-80 mb-1">Total Pendente</span>
-                        <span className="text-3xl font-extrabold tracking-tight">
-                            {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(totalPendente)}
+                        <span className="text-[10px] font-bold tracking-widest uppercase opacity-80 mb-1">
+                            {filter === 'done' ? 'Total Pago' : (filter === 'customMonth' ? 'Saldo do Mês Selecionado' : filter === 'thisMonth' ? 'Saldo Este Mês' : 'Saldo Pendente')}
                         </span>
-                        <span className="text-[10px] font-medium opacity-60 mt-1">{pendingBills.length} parcelas pendentes</span>
+                        <span className="text-3xl font-extrabold tracking-tight">
+                            {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(totalDisplayed)}
+                        </span>
+                        <div className="flex items-center gap-4 mt-3">
+                            <div className="flex flex-col">
+                                <span className="text-[9px] font-bold opacity-70 uppercase tracking-widest">Receitas</span>
+                                <span className="text-xs font-bold text-white">
+                                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(totalReceitas)}
+                                </span>
+                            </div>
+                            <div className="flex flex-col">
+                                <span className="text-[9px] font-bold opacity-70 uppercase tracking-widest">Despesas</span>
+                                <span className="text-xs font-bold text-white">
+                                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(totalDespesas)}
+                                </span>
+                            </div>
+                        </div>
                     </div>
                     <CalendarClock size={64} className="absolute -right-4 -bottom-4 opacity-10" />
                 </div>
@@ -275,14 +308,7 @@ export default function RemindersPage() {
                 ) : (
                     /* === TODAS CONTAS / ESTE MÊS (apenas pendentes) === */
                     (() => {
-                        const bills = filter === 'thisMonth'
-                            ? pendingBills.filter(b => isThisMonth(b.occurrenceDate))
-                            : filter === 'customMonth' && selectedMonth
-                            ? pendingBills.filter(b => {
-                                const [year, month] = selectedMonth.split('-');
-                                return isSameMonth(b.occurrenceDate, new Date(parseInt(year), parseInt(month) - 1));
-                              })
-                            : pendingBills
+                        const bills = displayedBills
 
                         if (bills.length === 0) {
                             return (
