@@ -24,11 +24,13 @@ function expandReminder(r: Reminder, isOccurrencePaid: (id: string, date: string
     const start = parseISO(r.due_date)
     const end = r.end_date ? parseISO(r.end_date) : null
 
+    const limitPast = addMonths(today, -2) // Mostra contas atrasadas de até 2 meses atrás
+
     // PAGAMENTO ÚNICO: apenas 1 ocorrência na data de vencimento
     if (r.frequency === 'Único') {
         const dateStr = format(start, 'yyyy-MM-dd')
         const paid = isOccurrencePaid(r.id, dateStr)
-        if (start >= today || paid) {
+        if (start >= limitPast || paid) {
             bills.push({
                 reminder: r,
                 occurrenceDate: start,
@@ -40,7 +42,7 @@ function expandReminder(r: Reminder, isOccurrencePaid: (id: string, date: string
         return bills
     }
 
-    // RECORRENTE: expande todas as parcelas futuras
+    // RECORRENTE: expande todas as parcelas futuras e atrasadas recentes
     const maxOccurrences = 2400 // limite seguro de iterações (200 anos)
     let current = start
     let index = 1
@@ -53,7 +55,7 @@ function expandReminder(r: Reminder, isOccurrencePaid: (id: string, date: string
         const totalParcelas = end ? countOccurrences(start, end, r.frequency) : null
         const paid = isOccurrencePaid(r.id, dateStr)
 
-        if (current >= today || paid) {
+        if (current >= limitPast || paid) {
             bills.push({
                 reminder: r,
                 occurrenceDate: current,

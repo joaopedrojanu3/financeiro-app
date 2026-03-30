@@ -102,6 +102,16 @@ function DashboardContent() {
 
     reminders.filter(r => r.is_active && r.type === 'expense').forEach(r => {
       const start = parseISO(r.due_date)
+
+      if (r.frequency === 'Único') {
+        const dateStr = format(start, 'yyyy-MM-dd')
+        if (isThisMonth(start) && !isOccurrencePaid(r.id, dateStr)) {
+          total += Number(r.amount)
+          count++
+        }
+        return
+      }
+
       const end = r.end_date ? parseISO(r.end_date) : null
       let current = start
       let index = 1
