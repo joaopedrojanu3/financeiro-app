@@ -114,16 +114,34 @@ export default function ExtratoSheet({ isOpen, onClose }: { isOpen: boolean, onC
                 {/* Container de Rolagem */}
                 <div className="flex-1 overflow-y-auto w-full px-4 pb-28">
 
-                    {/* Filtros */}
-                    <div className="flex w-full gap-2 mb-6 mt-4">
-                        <button className="flex items-center justify-center gap-1 bg-[#45D1C0] text-white px-4 py-2 rounded-xl text-sm font-semibold shadow-sm text-nowrap flex-1">
-                            Neste Mês <ChevronDown size={14} />
-                        </button>
-                        <button
-                            onClick={() => setFilterType(prev => prev === 'all' ? 'income' : prev === 'income' ? 'expense' : 'all')}
-                            className="flex flex-1 justify-center items-center gap-1 bg-slate-50 text-slate-600 px-4 py-2 rounded-xl text-sm font-semibold border border-slate-100 min-w-[140px]">
-                            {filterType === 'all' ? 'Todos os Tipos' : filterType === 'income' ? 'Só Receitas' : 'Só Despesas'} <ChevronDown size={14} />
-                        </button>
+                    {/* Filtros e Header */}
+                    <div className="flex flex-col gap-4 mb-6 mt-4">
+                        <div className="flex items-center justify-between px-1">
+                            <h2 className="text-xl font-extrabold text-slate-800">Extrato</h2>
+                            <button className="flex items-center gap-1 text-sm font-bold text-[#45D1C0] hover:text-[#38a99b] bg-[#45D1C0]/10 px-3 py-1.5 rounded-full transition-colors">
+                                Este Mês <ChevronDown size={14} />
+                            </button>
+                        </div>
+                        <div className="flex w-full bg-slate-100 p-1.5 rounded-2xl">
+                            <button
+                                onClick={() => setFilterType('all')}
+                                className={`flex-1 flex justify-center items-center py-2.5 rounded-xl text-[13px] font-bold transition-all duration-200 ${filterType === 'all' ? 'bg-white text-slate-800 shadow-sm ring-1 ring-slate-900/5' : 'text-slate-500 hover:text-slate-700'}`}
+                            >
+                                Todas
+                            </button>
+                            <button
+                                onClick={() => setFilterType('income')}
+                                className={`flex-1 flex justify-center items-center py-2.5 rounded-xl text-[13px] font-bold transition-all duration-200 ${filterType === 'income' ? 'bg-white text-[#17B29F] shadow-sm ring-1 ring-[#17B29F]/20' : 'text-slate-500 hover:text-slate-700'}`}
+                            >
+                                Receitas
+                            </button>
+                            <button
+                                onClick={() => setFilterType('expense')}
+                                className={`flex-1 flex justify-center items-center py-2.5 rounded-xl text-[13px] font-bold transition-all duration-200 ${filterType === 'expense' ? 'bg-white text-[#F03D1A] shadow-sm ring-1 ring-[#F03D1A]/20' : 'text-slate-500 hover:text-slate-700'}`}
+                            >
+                                Despesas
+                            </button>
+                        </div>
                     </div>
 
                     {/* Card Resumo do Período */}

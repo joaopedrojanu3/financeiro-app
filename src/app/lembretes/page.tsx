@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { CalendarClock, Plus, Calendar as CalendarIcon, Wallet, CheckCircle2, Loader2, CheckSquare, Square, Trash2 } from 'lucide-react'
+import { CalendarClock, Plus, Calendar as CalendarIcon, Wallet, CheckCircle2, Loader2, CheckSquare, Square, Trash2, RotateCcw } from 'lucide-react'
 import Link from 'next/link'
 import { useReminders, Reminder } from '@/hooks/useReminders'
 import { format, parseISO, isThisMonth, addDays, addWeeks, addMonths, addYears, isAfter, startOfDay, isSameMonth } from 'date-fns'
@@ -103,7 +103,7 @@ function countOccurrences(start: Date, end: Date, frequency: string): number {
 }
 
 export default function RemindersPage() {
-    const { reminders, loading, refetch, isOccurrencePaid, skipOccurrence, deleteReminder, bulkSkipOccurrences, updateOccurrence } = useReminders()
+    const { reminders, loading, refetch, isOccurrencePaid, skipOccurrence, deleteReminder, bulkSkipOccurrences, updateOccurrence, undoPayment } = useReminders()
     const [filter, setFilter] = useState<'all' | 'thisMonth' | 'done' | 'customMonth'>('thisMonth')
     const [selectedMonth, setSelectedMonth] = useState<string>(format(new Date(), 'yyyy-MM'))
     const [payingKey, setPayingKey] = useState<string | null>(null)
@@ -154,6 +154,25 @@ export default function RemindersPage() {
         } catch (error) {
             console.error('Erro ao pagar:', error)
             alert('Erro ao registrar pagamento. Tente novamente.')
+        } finally {
+            setPayingKey(null)
+        }
+    }
+
+    const handleUndoPayment = async (bill: ExpandedBill) => {
+        const key = `${bill.reminder.id}-${bill.occurrenceDateStr}`
+        if (payingKey) return
+
+        const confirmed = confirm(`Deseja desfazer o pagamento da parcela de ${format(bill.occurrenceDate, "dd/MM/yyyy")}?\nAtenção: a transação não será apagada automaticamente do seu Extrato. Você pode precisar excluí-la lá se necessário.`)
+        if (!confirmed) return
+
+        try {
+            setPayingKey(key)
+            await undoPayment(bill.reminder.id, bill.occurrenceDateStr)
+            refetch()
+        } catch (error) {
+            console.error('Erro ao desfazer pagamento:', error)
+            alert('Erro ao desfazer pagamento. Tente novamente.')
         } finally {
             setPayingKey(null)
         }
@@ -301,9 +320,19 @@ export default function RemindersPage() {
                                         <span className="text-[10px] font-bold text-emerald-500">✓ PAGA — {bill.label}</span>
                                     </div>
                                 </div>
-                                <span className="text-sm font-extrabold text-slate-400 flex-shrink-0 ml-2">
-                                    R$ {Number(bill.reminder.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                </span>
+                                <div className="flex flex-col items-end gap-1 flex-shrink-0 ml-2">
+                                    <span className="text-sm font-extrabold text-slate-400">
+                                        R$ {Number(bill.reminder.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                    </span>
+                                    <button
+                                        onClick={(e) => { e.stopPropagation(); handleUndoPayment(bill); }}
+                                        disabled={payingKey === `paid-${bill.reminder.id}-${bill.occurrenceDateStr}`}
+                                        className="mt-1 flex items-center gap-1 text-[10px] font-bold text-slate-500 bg-slate-100 px-3 py-1.5 rounded-lg hover:bg-slate-200 transition-colors disabled:opacity-50"
+                                    >
+                                        {payingKey === `${bill.reminder.id}-${bill.occurrenceDateStr}` ? <Loader2 size={12} className="animate-spin" /> : <RotateCcw size={12} />}
+                                        {payingKey === `${bill.reminder.id}-${bill.occurrenceDateStr}` ? '...' : 'Desfazer'}
+                                    </button>
+                                </div>
                             </div>
                         ))
                     )

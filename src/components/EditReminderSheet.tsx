@@ -60,6 +60,7 @@ export default function EditReminderSheet({ bill, isOpen, onClose, onUpdate, onD
                 description,
                 amount: numericAmount,
                 type: bill.reminder.type,
+                due_date: date,
                 dueDate: date,
                 category_id: bill.reminder.category_id || null, // pass the original category exactly
             })

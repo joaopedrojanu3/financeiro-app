@@ -95,6 +95,16 @@ export function useReminders() {
         refetchAll()
     }
 
+    const undoPayment = async (recurring_bill_id: string, occurrence_date: string) => {
+        const res = await fetch(`/api/bill-payments`, {
+            method: 'DELETE',
+            headers: getAdminHeaders(),
+            body: JSON.stringify({ recurring_bill_id, occurrence_date })
+        })
+        if (!res.ok) throw new Error('Erro ao desfazer pagamento')
+        refetchAll()
+    }
+
     const updateOccurrence = async (originalId: string, occurrenceDate: string, newData: any) => {
         // 1. Skip the original occurrence
         await skipOccurrence(originalId, occurrenceDate)
@@ -105,7 +115,7 @@ export function useReminders() {
             headers: getAdminHeaders(),
             body: JSON.stringify({
                 ...newData,
-                dueDate: newData.dueDate || occurrenceDate, // use the provided date
+                due_date: newData.due_date || newData.dueDate || occurrenceDate, // use the provided date
                 frequency: 'Único' // single occurrence replacing the specific month
             })
         })
@@ -127,6 +137,7 @@ export function useReminders() {
         skipOccurrence,
         deleteReminder,
         bulkSkipOccurrences,
-        updateOccurrence
+        updateOccurrence,
+        undoPayment
     }
 }
