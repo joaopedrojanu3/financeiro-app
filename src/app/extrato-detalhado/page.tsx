@@ -133,11 +133,24 @@ export default function ExtratoDetalhadoPage() {
             </div>
 
             {/* Filtros */}
-            <div className="flex w-full gap-2 mb-6">
+            <div className="flex w-full bg-white/70 backdrop-blur p-1.5 border border-white shadow-sm rounded-2xl mb-6">
                 <button
-                    onClick={() => setFilterType(prev => prev === 'all' ? 'income' : prev === 'income' ? 'expense' : 'all')}
-                    className="flex flex-1 justify-center items-center gap-1 bg-white text-[#17B29F] px-4 py-2.5 rounded-xl text-sm font-bold shadow-sm border border-[#17B29F]/20 transition-all hover:bg-[#17B29F]/5 min-w-[140px]">
-                    {filterType === 'all' ? 'Ver Todos' : filterType === 'income' ? 'Apenas Receitas' : 'Apenas Despesas'} <ChevronDown size={14} />
+                    onClick={() => setFilterType('all')}
+                    className={`flex-1 flex justify-center items-center py-2.5 rounded-xl text-[13px] font-bold transition-all duration-200 ${filterType === 'all' ? 'bg-white text-[#17B29F] shadow-sm ring-1 ring-[#17B29F]/20' : 'text-[#17B29F]/60 hover:text-[#17B29F]'}`}
+                >
+                    Ver Tudo
+                </button>
+                <button
+                    onClick={() => setFilterType('income')}
+                    className={`flex-1 flex justify-center items-center py-2.5 rounded-xl text-[13px] font-bold transition-all duration-200 ${filterType === 'income' ? 'bg-white text-[#10B981] shadow-sm ring-1 ring-[#10B981]/20' : 'text-[#10B981]/60 hover:text-[#10B981]'}`}
+                >
+                    Receitas
+                </button>
+                <button
+                    onClick={() => setFilterType('expense')}
+                    className={`flex-1 flex justify-center items-center py-2.5 rounded-xl text-[13px] font-bold transition-all duration-200 ${filterType === 'expense' ? 'bg-white text-[#F43F5E] shadow-sm ring-1 ring-[#F43F5E]/20' : 'text-[#F43F5E]/60 hover:text-[#F43F5E]'}`}
+                >
+                    Despesas
                 </button>
             </div>
 
