@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
 
         const supabase = await createClient()
         const { searchParams } = new URL(request.url)
-        const limit = searchParams.get('limit') ? parseInt(searchParams.get('limit') as string) : 50
+        const limit = searchParams.get('limit') ? parseInt(searchParams.get('limit') as string) : 10000
 
         const { data, error } = await supabase
             .from('transactions')
