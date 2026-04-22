@@ -62,7 +62,7 @@ export default function ExtratoDetalhadoPage() {
             icon: string,
             type: 'income' | 'expense',
             total: number,
-            transactions: any[]
+            transactions: unknown[]
         }> = {}
 
         transactions.forEach(t => {

@@ -105,7 +105,7 @@ export function useReminders() {
         refetchAll()
     }
 
-    const updateOccurrence = async (originalId: string, occurrenceDate: string, newData: any) => {
+    const updateOccurrence = async (originalId: string, occurrenceDate: string, newData: unknown) => {
         // 1. Skip the original occurrence
         await skipOccurrence(originalId, occurrenceDate)
 

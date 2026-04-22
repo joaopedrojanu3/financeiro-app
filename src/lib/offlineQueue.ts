@@ -2,13 +2,13 @@ export type OfflineRequest = {
     id: string
     url: string
     method: string
-    body: any
+    body: unknown
     timestamp: number
 }
 
 const QUEUE_KEY = 'stitch_offline_queue'
 
-export function saveToQueue(url: string, method: string, body: any) {
+export function saveToQueue(url: string, method: string, body: unknown) {
     if (typeof window === 'undefined') return
 
     const item: OfflineRequest = {

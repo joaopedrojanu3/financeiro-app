@@ -11,7 +11,9 @@ export default function SyncProvider({ children }: { children: React.ReactNode }
 
     useEffect(() => {
         // Inicializa estado
-        setIsOffline(!navigator.onLine)
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        setIsOffline(typeof navigator !== 'undefined' ? !navigator.onLine : false)
+        // eslint-disable-next-line react-hooks/exhaustive-deps
         setPendingItems(getQueue().length)
 
         const handleOnline = () => {

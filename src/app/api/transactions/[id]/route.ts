@@ -15,7 +15,7 @@ export async function PUT(
         const { id } = await context.params
         const body = await request.json()
 
-        const updateData: any = {}
+        const updateData: unknown = {}
         if (body.description) updateData.description = body.description
         if (body.amount !== undefined) updateData.amount = body.amount
         if (body.type) updateData.type = body.type

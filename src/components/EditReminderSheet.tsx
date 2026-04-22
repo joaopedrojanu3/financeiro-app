@@ -16,7 +16,7 @@ interface EditReminderSheetProps {
     bill: ExpandedBill | null
     isOpen: boolean
     onClose: () => void
-    onUpdate: (id: string, dateStr: string, newData: any) => Promise<void>
+    onUpdate: (id: string, dateStr: string, newData: unknown) => Promise<void>
     onDeleteSingle: (id: string, dateStr: string) => Promise<void>
     onDeleteSeries: (id: string) => Promise<void>
 }
@@ -65,7 +65,7 @@ export default function EditReminderSheet({ bill, isOpen, onClose, onUpdate, onD
                 category_id: bill.reminder.category_id || null, // pass the original category exactly
             })
             onClose()
-        } catch (error: any) {
+        } catch (error: unknown) {
             alert(error.message)
         } finally {
             setIsSubmitting(false)
@@ -78,7 +78,7 @@ export default function EditReminderSheet({ bill, isOpen, onClose, onUpdate, onD
         try {
             await onDeleteSingle(bill.reminder.id, bill.occurrenceDateStr)
             onClose()
-        } catch (err: any) {
+        } catch (err: unknown) {
             alert(err.message)
         } finally {
             setIsDeletingSingle(false)
@@ -91,7 +91,7 @@ export default function EditReminderSheet({ bill, isOpen, onClose, onUpdate, onD
         try {
             await onDeleteSeries(bill.reminder.id)
             onClose()
-        } catch (err: any) {
+        } catch (err: unknown) {
             alert(err.message)
         } finally {
             setIsDeletingSeries(false)

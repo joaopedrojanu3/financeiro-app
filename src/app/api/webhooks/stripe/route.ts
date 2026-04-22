@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase'
 export async function POST(req: Request) {
     // Instanciando Stripe no momento da req para evitar erro no build time sem ENV
     const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string || 'sk_dummy', {
-        apiVersion: '2026-02-25.clover' as any,
+        apiVersion: '2026-02-25.clover' as unknown,
     })
     const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!
 
