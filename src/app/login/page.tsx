@@ -45,6 +45,11 @@ export default async function LoginPage({
                             placeholder="Sua senha secreta"
                             className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm font-medium text-slate-900 focus:outline-none focus:border-[#45D1C0] focus:ring-2 focus:ring-[#45D1C0]/20 transition-all"
                         />
+                        <div className="flex justify-end mt-1">
+                            <Link href="/esqueci-senha" className="text-xs font-bold text-[#45D1C0] hover:underline">
+                                Esqueci a senha
+                            </Link>
+                        </div>
                     </div>
 
                     <button
