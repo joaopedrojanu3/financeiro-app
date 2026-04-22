@@ -28,7 +28,7 @@ export async function POST() {
         await supabaseAdmin.from('savings_goals').delete().eq('user_id', user.id)
 
         return NextResponse.json({ success: true, message: 'Conta zerada com sucesso!' })
-    } catch (error: unknown) {
+    } catch (error: any) /* eslint-disable-line @typescript-eslint/no-explicit-any */ {
         return NextResponse.json({ error: error.message }, { status: 500 })
     }
 }

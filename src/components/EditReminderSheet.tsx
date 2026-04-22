@@ -65,7 +65,7 @@ export default function EditReminderSheet({ bill, isOpen, onClose, onUpdate, onD
                 category_id: bill.reminder.category_id || null, // pass the original category exactly
             })
             onClose()
-        } catch (error: unknown) {
+        } catch (error: any) /* eslint-disable-line @typescript-eslint/no-explicit-any */ {
             alert(error.message)
         } finally {
             setIsSubmitting(false)
@@ -78,7 +78,7 @@ export default function EditReminderSheet({ bill, isOpen, onClose, onUpdate, onD
         try {
             await onDeleteSingle(bill.reminder.id, bill.occurrenceDateStr)
             onClose()
-        } catch (err: unknown) {
+        } catch (err: any) /* eslint-disable-line @typescript-eslint/no-explicit-any */ {
             alert(err.message)
         } finally {
             setIsDeletingSingle(false)
@@ -91,7 +91,7 @@ export default function EditReminderSheet({ bill, isOpen, onClose, onUpdate, onD
         try {
             await onDeleteSeries(bill.reminder.id)
             onClose()
-        } catch (err: unknown) {
+        } catch (err: any) /* eslint-disable-line @typescript-eslint/no-explicit-any */ {
             alert(err.message)
         } finally {
             setIsDeletingSeries(false)

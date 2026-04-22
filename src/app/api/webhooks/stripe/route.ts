@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase'
 export async function POST(req: Request) {
     // Instanciando Stripe no momento da req para evitar erro no build time sem ENV
     const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string || 'sk_dummy', {
-        apiVersion: '2026-02-25.clover' as unknown,
+        apiVersion: '2026-02-25.clover' as any /* eslint-disable-line @typescript-eslint/no-explicit-any */,
     })
     const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!
 
@@ -17,7 +17,7 @@ export async function POST(req: Request) {
 
         try {
             event = stripe.webhooks.constructEvent(bodyText, signature, webhookSecret)
-        } catch (err: unknown) {
+        } catch (err: any) /* eslint-disable-line @typescript-eslint/no-explicit-any */ {
             const errorMessage = err instanceof Error ? err.message : 'Unknown error'
             console.error(`❌ Erro de Webhook:`, errorMessage)
             return NextResponse.json({ error: `Webhook Error: ${errorMessage}` }, { status: 400 })
